@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>GBV Records Management</h2>
+<form method="GET" class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" name="search" placeholder="Search by name/ID" value="{{ search }}">
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" name="gender">
+            <option value="">All Genders</option>
+            <option value="M" {% if gender_filter == 'M' %}selected{% endif %}>Male</option>
+            <option value="F" {% if gender_filter == 'F' %}selected{% endif %}>Female</option>
+            <option value="O" {% if gender_filter == 'O' %}selected{% endif %}>Other</option>
+        </select>
+    </div>
+    <div class="col-md-5">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Serial No.</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Age</th>
+            <th>Arrival Date</th>
+            <th>Type of Violence</th>
+            <th>Referral</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record['serial_no'] }}</td>
+            <td>{{ record['client_name'] }}</td>
+            <td>{{ record['gender'] }}</td>
+            <td>{{ record['age'] }}</td>
+            <td>{{ record['arrival_date'] }}</td>
+            <td>{{ record['type_violence'] }}</td>
+            <td>{{ record['referral'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p><em>Total Records: {{ records|length }}</em></p>
+{% endblock %}
