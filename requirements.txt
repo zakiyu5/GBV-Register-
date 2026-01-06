@@ -1,2 +1,3 @@
 Flask==3.0.3
 ReportLab==4.2.2
+gunicorn
