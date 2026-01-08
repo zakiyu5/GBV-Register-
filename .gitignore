@@ -1,0 +1,23 @@
+# Database - NEVER commit real patient data
+gbv.db
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment (if you ever create one)
+venv/
+env/
+.env
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+.DS_Store
