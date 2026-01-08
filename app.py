@@ -1,241 +1,553 @@
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+from flask import Flask, render_template, request, flash, redirect, url_for, send_file
 import sqlite3
 from datetime import datetime, timedelta
 import json
+import pandas as pd
+from io import BytesIO
 
 app = Flask(__name__)
-app.secret_key = 'gbv_secret_key'  # Change in production
+app.secret_key = 'gbv_secret_key_2026'  # Change this in production!
 
-# DB Setup
+# Database
 DB_NAME = 'gbv.db'
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Schema based on PDF form (key fields for analytics)
+    
+    # Full schema matching HMIS MCH 061 Gender-Based Violence Register
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS gbv_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             serial_no TEXT,
+            arrival_datetime TEXT,
             national_id TEXT,
-            gender TEXT,  -- M/F/O
-            age INTEGER,
-            arrival_date DATETIME DEFAULT CURRENT_TIMESTAMP,
             client_name TEXT,
             address TEXT,
             contact_no TEXT,
             next_of_kin TEXT,
+            ovc TEXT,
+            age INTEGER,
+            sex TEXT,
             marital_status TEXT,
-            report_date DATETIME,
-            police_report TEXT,  -- Y/N
-            incident_date DATE,
-            type_violence TEXT,  -- Physical/Sexual/Emotional/Economic/Other
+            incident_datetime TEXT,
+            medical_form_filled TEXT,
+            p3_form TEXT,
+            disability TEXT,
             perpetrator_relation TEXT,
+            type_violence TEXT,
             type_case TEXT,
-            hiv_test_initial TEXT,  -- Neg/KP/ND
-            pregnancy_test TEXT,  -- Pos/Neg/ND
-            pep_given TEXT,  -- Y/N
-            referral TEXT,  -- Y/N
-            facility_name TEXT
+            hiv_test_initial TEXT,
+            pregnancy_test TEXT,
+            anal_swab TEXT,
+            hvs TEXT,
+            spermatozoa TEXT,
+            urinalysis TEXT,
+            hep_b_initial TEXT,
+            syphilis_initial TEXT,
+            ecp_given TEXT,
+            pep_given TEXT,
+            sti_treatment TEXT,
+            trauma_counseling_initial TEXT,
+            adherence_counseling_initial TEXT,
+            tt_given_initial TEXT,
+            hep_b_vaccine_initial TEXT,
+            syphilis_treatment TEXT,
+            referral_initial TEXT,
+            facility_name TEXT,
+            
+            -- 2 Weeks Follow-up
+            actual_return_2w TEXT,
+            next_appointment_2w TEXT,
+            referral_2w TEXT,
+            trauma_2w TEXT,
+            adherence_2w TEXT,
+            pep_refill_2w TEXT,
+            hiv_2w TEXT,
+            pregnancy_2w TEXT,
+            hb_2w REAL,
+            alt_2w INTEGER,
+            hep_b_1st_2w TEXT,
+            tt_2w TEXT,
+            syphilis_2w TEXT,
+            referral_update_2w TEXT,
+
+            -- 1 Month Follow-up
+            actual_return_1m TEXT,
+            next_appointment_1m TEXT,
+            referral_1m TEXT,
+            trauma_1m TEXT,
+            adherence_1m TEXT,
+            pep_refill_1m TEXT,
+            pep_completion TEXT,
+            hiv_1m TEXT,
+            pregnancy_1m TEXT,
+            hb_1m REAL,
+            alt_1m INTEGER,
+            hep_b_2nd_1m TEXT,
+            tt_1m TEXT,
+            syphilis_1m TEXT,
+            referral_update_1m TEXT,
+
+            -- 3 Months Follow-up
+            actual_return_3m TEXT,
+            next_appointment_3m TEXT,
+            referral_3m TEXT,
+            trauma_3m TEXT,
+            adherence_3m TEXT,
+            hiv_3m TEXT,
+            hep_b_3m TEXT,
+            syphilis_3m TEXT,
+            hb_3m REAL,
+            alt_3m INTEGER,
+            hep_b_3rd_3m TEXT,
+            pregnancy_3m TEXT,
+            referral_update_3m TEXT,
+
+            -- 6 Months Follow-up
+            actual_return_6m TEXT,
+            next_appointment_6m TEXT,
+            referral_6m TEXT,
+            trauma_6m TEXT,
+            hiv_6m TEXT,
+            hep_b_6m TEXT,
+            syphilis_6m TEXT,
+            referral_update_6m TEXT,
+            client_outcome TEXT,
+
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    # Insert sample data for demo (10 records; using 2026 dates to match current year)
-    sample_data = [
-        ('001', 'UG123456', 'F', 25, '2026-01-01 10:00', 'Jane Doe', 'Kampala', '0771234567', 'John Doe: 0777654321', 'Married', '2026-01-01 09:00', 'Y', '2025-12-31', 'Sexual', 'Partner', 'Rape', 'Neg', 'Neg', 'Y', 'Y', 'Kayunga Hospital'),
-        ('002', 'UG789012', 'M', 15, '2026-01-02 14:30', 'John Smith', 'Nakasongola', '0789876543', 'Mary Smith: 0783456789', 'Single', '2026-01-02 13:00', 'N', '2026-01-01', 'Physical', 'Stranger', 'Assault', 'ND', 'Neg', 'N', 'N', 'Kayunga Hospital'),
-        ('003', 'UG345678', 'F', 30, '2026-01-03 08:15', 'Alice Johnson', 'Kayunga', '0778765432', 'Bob Johnson: 0772345678', 'Married', '2026-01-03 07:45', 'Y', '2026-01-02', 'Emotional', 'Family', 'Harassment', 'Neg', 'ND', 'N', 'Y', 'Kayunga Hospital'),
-        ('004', 'UG901234', 'F', 12, '2026-01-04 16:20', 'Child Victim', 'Mukono', '0781234567', 'Guardian: 0787654321', 'Single', '2026-01-04 15:50', 'Y', '2026-01-03', 'Sexual', 'Relative', 'Abuse', 'KP', 'Pos', 'Y', 'Y', 'Kayunga Hospital'),
-        ('005', 'UG567890', 'O', 40, '2026-01-05 11:00', 'Alex Nonbinary', 'Entebbe', '0774567890', 'Friend: 0778901234', 'Divorced', '2026-01-05 10:30', 'N', '2026-01-04', 'Economic', 'Employer', 'Exploitation', 'Neg', 'Neg', 'N', 'N', 'Kayunga Hospital'),
-        ('006', 'UG234567', 'M', 22, '2026-01-06 09:45', 'Mike Lee', 'Jinja', '0785678901', 'Sister: 0780123456', 'Single', '2026-01-06 09:15', 'Y', '2026-01-05', 'Physical', 'Acquaintance', 'Battery', 'ND', 'Neg', 'N', 'Y', 'Kayunga Hospital'),
-        ('007', 'UG890123', 'F', 18, '2026-01-07 13:30', 'Sara Kim', 'Wakiso', '0773456789', 'Mother: 0776789012', 'Single', '2026-01-07 13:00', 'N', '2026-01-06', 'Sexual', 'Stranger', 'Assault', 'Neg', 'Neg', 'Y', 'Y', 'Kayunga Hospital'),
-        ('008', 'UG456789', 'M', 35, '2026-01-08 17:10', 'Tom Brown', 'Luweero', '0782345678', 'Wife: 0789012345', 'Married', '2026-01-08 16:40', 'Y', '2026-01-07', 'Emotional', 'Partner', 'Abuse', 'Neg', 'ND', 'N', 'N', 'Kayunga Hospital'),
-        ('009', 'UG123789', 'F', 28, '2026-01-09 12:00', 'Eva Green', 'Nairobi', '0775678901', 'Brother: 0771234567', 'Widowed', '2026-01-09 11:30', 'Y', '2026-01-08', 'Economic', 'Family', 'Neglect', 'KP', 'Neg', 'N', 'Y', 'Kayunga Hospital'),
-        ('010', 'UG678901', 'O', 16, '2026-01-10 15:45', 'Riley Taylor', 'Kampala', '0783456789', 'Parent: 0787890123', 'Single', '2026-01-10 15:15', 'N', '2026-01-09', 'Physical', 'Schoolmate', 'Bullying', 'ND', 'Neg', 'N', 'Y', 'Kayunga Hospital'),
-    ]
-    cursor.executemany('''
-        INSERT OR IGNORE INTO gbv_records (serial_no, national_id, gender, age, arrival_date, client_name, address, contact_no, next_of_kin, marital_status, report_date, police_report, incident_date, type_violence, perpetrator_relation, type_case, hiv_test_initial, pregnancy_test, pep_given, referral, facility_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', sample_data)
     conn.commit()
     conn.close()
 
-init_db()
+init_db()  # Creates the table on first run
 
-# Helper: Get DB connection
 def get_db():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
-# Route 1: Data Entry Form
+# Safe conversion helpers
+def to_float(val, default=0.0):
+    try:
+        return float(val) if val not in (None, '', 'ND', 'NA') else default
+    except:
+        return default
+
+def to_int(val, default=0):
+    try:
+        return int(val) if val not in (None, '', 'ND', 'NA') else default
+    except:
+        return default
+
 @app.route('/', methods=['GET', 'POST'])
 def data_entry():
     if request.method == 'POST':
         conn = get_db()
         cursor = conn.cursor()
-        # Auto-fill current date/time for arrival and report
-        now = datetime.now()
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         try:
+            data = (
+                request.form.get('serial_no'),
+                request.form.get('arrival_datetime') or None,
+                request.form.get('national_id'),
+                request.form.get('client_name'),
+                request.form.get('address'),
+                request.form.get('contact_no'),
+                request.form.get('next_of_kin'),
+                request.form.get('ovc'),
+                to_int(request.form.get('age')),
+                request.form.get('sex'),
+                request.form.get('marital_status'),
+                request.form.get('incident_datetime') or None,
+                request.form.get('medical_form_filled') or None,
+                request.form.get('p3_form'),
+                request.form.get('disability'),
+                request.form.get('perpetrator_relation'),
+                request.form.get('type_violence'),
+                request.form.get('type_case'),
+                request.form.get('hiv_test_initial'),
+                request.form.get('pregnancy_test'),
+                request.form.get('anal_swab'),
+                request.form.get('hvs'),
+                request.form.get('spermatozoa'),
+                request.form.get('urinalysis'),
+                request.form.get('hep_b_initial'),
+                request.form.get('syphilis_initial'),
+                request.form.get('ecp_given'),
+                request.form.get('pep_given'),
+                request.form.get('sti_treatment'),
+                request.form.get('trauma_counseling_initial'),
+                request.form.get('adherence_counseling_initial'),
+                request.form.get('tt_given_initial'),
+                request.form.get('hep_b_vaccine_initial'),
+                request.form.get('syphilis_treatment'),
+                request.form.get('referral_initial'),
+                request.form.get('facility_name'),
+
+                # 2 Weeks
+                request.form.get('actual_return_2w') or None,
+                request.form.get('next_appointment_2w') or None,
+                request.form.get('referral_2w'),
+                request.form.get('trauma_2w'),
+                request.form.get('adherence_2w'),
+                request.form.get('pep_refill_2w'),
+                request.form.get('hiv_2w'),
+                request.form.get('pregnancy_2w'),
+                to_float(request.form.get('hb_2w')),
+                to_int(request.form.get('alt_2w')),
+                request.form.get('hep_b_1st_2w'),
+                request.form.get('tt_2w'),
+                request.form.get('syphilis_2w'),
+                request.form.get('referral_update_2w'),
+
+                # 1 Month
+                request.form.get('actual_return_1m') or None,
+                request.form.get('next_appointment_1m') or None,
+                request.form.get('referral_1m'),
+                request.form.get('trauma_1m'),
+                request.form.get('adherence_1m'),
+                request.form.get('pep_refill_1m'),
+                request.form.get('pep_completion'),
+                request.form.get('hiv_1m'),
+                request.form.get('pregnancy_1m'),
+                to_float(request.form.get('hb_1m')),
+                to_int(request.form.get('alt_1m')),
+                request.form.get('hep_b_2nd_1m'),
+                request.form.get('tt_1m'),
+                request.form.get('syphilis_1m'),
+                request.form.get('referral_update_1m'),
+
+                # 3 Months
+                request.form.get('actual_return_3m') or None,
+                request.form.get('next_appointment_3m') or None,
+                request.form.get('referral_3m'),
+                request.form.get('trauma_3m'),
+                request.form.get('adherence_3m'),
+                request.form.get('hiv_3m'),
+                request.form.get('hep_b_3m'),
+                request.form.get('syphilis_3m'),
+                to_float(request.form.get('hb_3m')),
+                to_int(request.form.get('alt_3m')),
+                request.form.get('hep_b_3rd_3m'),
+                request.form.get('pregnancy_3m'),
+                request.form.get('referral_update_3m'),
+
+                # 6 Months
+                request.form.get('actual_return_6m') or None,
+                request.form.get('next_appointment_6m') or None,
+                request.form.get('referral_6m'),
+                request.form.get('trauma_6m'),
+                request.form.get('hiv_6m'),
+                request.form.get('hep_b_6m'),
+                request.form.get('syphilis_6m'),
+                request.form.get('referral_update_6m'),
+                request.form.get('client_outcome'),
+                now
+            )
+
             cursor.execute('''
-                INSERT INTO gbv_records (serial_no, national_id, gender, age, arrival_date, client_name, address, contact_no, next_of_kin, marital_status,
-                                         report_date, police_report, incident_date, type_violence, perpetrator_relation, type_case, hiv_test_initial,
-                                         pregnancy_test, pep_given, referral, facility_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                request.form['serial_no'], request.form['national_id'], request.form['gender'], int(request.form['age']) if request.form['age'] else 0,
-                now, request.form['client_name'], request.form['address'], request.form['contact_no'], request.form['next_of_kin'],
-                request.form['marital_status'], now, request.form['police_report'], request.form['incident_date'], request.form['type_violence'],
-                request.form['perpetrator_relation'], request.form['type_case'], request.form['hiv_test_initial'], request.form['pregnancy_test'],
-                request.form['pep_given'], request.form['referral'], request.form['facility_name']
-            ))
+                INSERT INTO gbv_records (
+                    serial_no, arrival_datetime, national_id, client_name, address, contact_no, next_of_kin, ovc, age, sex,
+                    marital_status, incident_datetime, medical_form_filled, p3_form, disability, perpetrator_relation,
+                    type_violence, type_case, hiv_test_initial, pregnancy_test, anal_swab, hvs, spermatozoa, urinalysis,
+                    hep_b_initial, syphilis_initial, ecp_given, pep_given, sti_treatment, trauma_counseling_initial,
+                    adherence_counseling_initial, tt_given_initial, hep_b_vaccine_initial, syphilis_treatment, referral_initial,
+                    facility_name,
+                    actual_return_2w, next_appointment_2w, referral_2w, trauma_2w, adherence_2w, pep_refill_2w, hiv_2w,
+                    pregnancy_2w, hb_2w, alt_2w, hep_b_1st_2w, tt_2w, syphilis_2w, referral_update_2w,
+                    actual_return_1m, next_appointment_1m, referral_1m, trauma_1m, adherence_1m, pep_refill_1m, pep_completion,
+                    hiv_1m, pregnancy_1m, hb_1m, alt_1m, hep_b_2nd_1m, tt_1m, syphilis_1m, referral_update_1m,
+                    actual_return_3m, next_appointment_3m, referral_3m, trauma_3m, adherence_3m, hiv_3m, hep_b_3m, syphilis_3m,
+                    hb_3m, alt_3m, hep_b_3rd_3m, pregnancy_3m, referral_update_3m,
+                    actual_return_6m, next_appointment_6m, referral_6m, trauma_6m, hiv_6m, hep_b_6m, syphilis_6m,
+                    referral_update_6m, client_outcome, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', data)
+            
             conn.commit()
-            flash('Record added successfully!')
+            flash('Record added successfully!', 'success')
         except Exception as e:
-            flash(f'Error adding record: {str(e)}')
+            flash(f'Error adding record: {str(e)}', 'danger')
         finally:
             conn.close()
+        
         return redirect(url_for('data_entry'))
+    
     return render_template('form.html')
 
-# Route 2: Records Management
 @app.route('/records')
 def records():
-    search = request.args.get('search', '')
-    gender_filter = request.args.get('gender', '')
     conn = get_db()
-    cursor = conn.cursor()
-    query = '''
-        SELECT * FROM gbv_records 
-        WHERE client_name LIKE ? OR national_id LIKE ?
-    '''
-    params = [f'%{search}%', f'%{search}%']
-    if gender_filter:
-        query += ' AND gender = ?'
-        params.append(gender_filter)
-    query += ' ORDER BY arrival_date DESC'
-    cursor.execute(query, params)
-    records_list = cursor.fetchall()
+    records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
     conn.close()
-    return render_template('records.html', records=records_list, search=search, gender_filter=gender_filter)
+    return render_template('records.html', records=records_list)
 
-# Route 3: Reports (Dynamic by period)
 @app.route('/reports')
 def reports():
-    period = request.args.get('period', 'daily')  # daily/weekly/monthly/quarterly/yearly
+    period = request.args.get('period', 'all')  # all/daily/weekly/monthly/quarterly/yearly
     end_date = datetime.now()
+    start_date = None
+    period_name = 'All Time'
+
     if period == 'daily':
         start_date = end_date - timedelta(days=1)
+        period_name = 'Daily'
     elif period == 'weekly':
         start_date = end_date - timedelta(weeks=1)
+        period_name = 'Weekly'
     elif period == 'monthly':
         start_date = end_date.replace(day=1)
+        period_name = 'Monthly'
     elif period == 'quarterly':
         quarter_start_month = ((end_date.month - 1) // 3 * 3) + 1
         start_date = end_date.replace(month=quarter_start_month, day=1)
+        period_name = 'Quarterly'
     elif period == 'yearly':
         start_date = end_date.replace(month=1, day=1)
-    else:
-        start_date = end_date - timedelta(days=30)  # Default
+        period_name = 'Yearly'
 
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT * FROM gbv_records 
-        WHERE arrival_date BETWEEN ? AND ?
-        ORDER BY arrival_date
-    ''', (start_date, end_date))
-    report_records = cursor.fetchall()
+    if period == 'all':
+        records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
+    else:
+        records_list = conn.execute('''
+            SELECT * FROM gbv_records 
+            WHERE created_at BETWEEN ? AND ?
+            ORDER BY created_at DESC
+        ''', (start_date, end_date)).fetchall()
     conn.close()
-    return render_template('reports.html', records=report_records, period=period, start_date=start_date.strftime('%Y-%m-%d'), end_date=end_date.strftime('%Y-%m-%d'))
 
-# Route 4: Analytics Dashboard (KPIs + Charts Data)
+    return render_template('reports.html', 
+                           records=records_list,
+                           period=period_name,
+                           start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
+                           end_date=end_date.strftime('%Y-%m-%d'),
+                           current_period=period)
+
 @app.route('/dashboard')
 def dashboard():
+    # Default: last 30 days
     start_date_str = request.args.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
     end_date_str = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)  # inclusive
+    except:
+        start_date = datetime.now() - timedelta(days=30)
+        end_date = datetime.now() + timedelta(days=1)
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = datetime.now().strftime('%Y-%m-%d')
 
     conn = get_db()
     cursor = conn.cursor()
 
-    # KPIs
-    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ?', (start_date, end_date))
+    # === KPIs ===
+    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE created_at BETWEEN ? AND ?', (start_date, end_date))
     total_cases = cursor.fetchone()[0] or 0
 
-    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE gender = "F" AND arrival_date BETWEEN ? AND ?', (start_date, end_date))
+    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE sex = "F" AND created_at BETWEEN ? AND ?', (start_date, end_date))
     female_count = cursor.fetchone()[0] or 0
-    female_pct = round((female_count / total_cases * 100) if total_cases else 0, 1)
+    female_pct = round((female_count / total_cases * 100) if total_cases > 0 else 0, 1)
 
-    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE age < 18 AND arrival_date BETWEEN ? AND ?', (start_date, end_date))
+    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE age < 18 AND created_at BETWEEN ? AND ?', (start_date, end_date))
     minors_count = cursor.fetchone()[0] or 0
-    minors_pct = round((minors_count / total_cases * 100) if total_cases else 0, 1)
+    minors_pct = round((minors_count / total_cases * 100) if total_cases > 0 else 0, 1)
 
-    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE referral = "Y" AND arrival_date BETWEEN ? AND ?', (start_date, end_date))
+    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE pep_given = "Y" AND created_at BETWEEN ? AND ?', (start_date, end_date))
+    pep_count = cursor.fetchone()[0] or 0
+    pep_pct = round((pep_count / total_cases * 100) if total_cases > 0 else 0, 1)
+
+    cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE referral_initial IN ("1","2","3","4","5","6") AND created_at BETWEEN ? AND ?', (start_date, end_date))
     referred_count = cursor.fetchone()[0] or 0
-    referred_pct = round((referred_count / total_cases * 100) if total_cases else 0, 1)
+    referred_pct = round((referred_count / total_cases * 100) if total_cases > 0 else 0, 1)
 
-    # Most affected day of week (0=Sun, 1=Mon, etc.)
-    cursor.execute('SELECT strftime("%w", arrival_date) as day_num, COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY day_num ORDER BY COUNT(*) DESC LIMIT 1', (start_date, end_date))
-    most_affected = cursor.fetchone()
-    most_affected_day = most_affected[0] if most_affected else 'N/A'
-
-    # Chart Data (JSON-ready)
-    # 1. Cases Over Time (Monthly)
-    cursor.execute('SELECT strftime("%Y-%m", arrival_date) as month, COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY month ORDER BY month', (start_date, end_date))
+    # === Charts Data ===
+    # 1. Cases over time (monthly)
+    cursor.execute('''
+        SELECT strftime('%Y-%m', created_at) as month, COUNT(*) 
+        FROM gbv_records 
+        WHERE created_at BETWEEN ? AND ? 
+        GROUP BY month ORDER BY month
+    ''', (start_date, end_date))
     time_data = cursor.fetchall()
     time_labels = [row[0] for row in time_data]
     time_values = [row[1] for row in time_data]
 
-    # 2. By Gender
-    cursor.execute('SELECT gender, COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY gender', (start_date, end_date))
-    gender_data = cursor.fetchall()
-    gender_labels = [row[0] or 'Unknown' for row in gender_data]
-    gender_values = [row[1] for row in gender_data]
-
-    # 3. Type of Violence
-    cursor.execute('SELECT type_violence, COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY type_violence', (start_date, end_date))
+    # 2. Type of Violence
+    cursor.execute('''
+        SELECT type_violence, COUNT(*) 
+        FROM gbv_records 
+        WHERE created_at BETWEEN ? AND ? 
+        GROUP BY type_violence
+    ''', (start_date, end_date))
     violence_data = cursor.fetchall()
     violence_labels = [row[0] or 'Unknown' for row in violence_data]
     violence_values = [row[1] for row in violence_data]
 
-    # 4. Age Groups
+    # 3. Age Groups
     cursor.execute('''
         SELECT 
             CASE 
                 WHEN age < 10 THEN '0-9'
-                WHEN age < 18 THEN '10-17'
-                WHEN age < 25 THEN '18-24'
-                WHEN age < 50 THEN '25-49'
+                WHEN age BETWEEN 10 AND 17 THEN '10-17'
+                WHEN age BETWEEN 18 AND 24 THEN '18-24'
+                WHEN age BETWEEN 25 AND 49 THEN '25-49'
                 ELSE '50+'
-            END as age_group, COUNT(*)
-        FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY age_group
+            END as age_group, 
+            COUNT(*)
+        FROM gbv_records 
+        WHERE created_at BETWEEN ? AND ? 
+        GROUP BY age_group
     ''', (start_date, end_date))
     age_data = cursor.fetchall()
-    age_labels = [row[0] or 'Unknown' for row in age_data]
+    age_labels = [row[0] for row in age_data]
     age_values = [row[1] for row in age_data]
-
-    # 5. Referrals
-    cursor.execute('SELECT referral, COUNT(*) FROM gbv_records WHERE arrival_date BETWEEN ? AND ? GROUP BY referral', (start_date, end_date))
-    referral_data = cursor.fetchall()
-    referral_labels = [row[0] or 'Unknown' for row in referral_data]
-    referral_values = [row[1] for row in referral_data]
 
     conn.close()
 
-    # Pass to template as JSON
     chart_data = {
         'time': {'labels': time_labels, 'values': time_values},
-        'gender': {'labels': gender_labels, 'values': gender_values},
         'violence': {'labels': violence_labels, 'values': violence_values},
-        'age': {'labels': age_labels, 'values': age_values},
-        'referral': {'labels': referral_labels, 'values': referral_values}
+        'age': {'labels': age_labels, 'values': age_values}
     }
 
-    return render_template('dashboard.html', 
-                          total_cases=total_cases, female_pct=female_pct, minors_pct=minors_pct, 
-                          referred_pct=referred_pct, most_affected_day=most_affected_day,
-                          chart_data=json.dumps(chart_data), start_date=start_date_str, end_date=end_date_str)
+    return render_template('dashboard.html',
+                           total_cases=total_cases,
+                           female_pct=female_pct,
+                           minors_pct=minors_pct,
+                           pep_pct=pep_pct,
+                           referred_pct=referred_pct,
+                           chart_data=json.dumps(chart_data),
+                           start_date=start_date_str,
+                           end_date=end_date_str)
 
+@app.route('/export/csv')
+def export_csv():
+    period = request.args.get('period', 'all')
+    # Reuse the same logic as reports to get the correct records
+    end_date = datetime.now()
+    start_date = None
+    if period != 'all':
+        if period == 'daily':
+            start_date = end_date - timedelta(days=1)
+        elif period == 'weekly':
+            start_date = end_date - timedelta(weeks=1)
+        elif period == 'monthly':
+            start_date = end_date.replace(day=1)
+        elif period == 'quarterly':
+            quarter_start_month = ((end_date.month - 1) // 3 * 3) + 1
+            start_date = end_date.replace(month=quarter_start_month, day=1)
+        elif period == 'yearly':
+            start_date = end_date.replace(month=1, day=1)
+
+    conn = get_db()
+    if period == 'all':
+        df = pd.read_sql_query('SELECT * FROM gbv_records ORDER BY created_at DESC', conn)
+    else:
+        df = pd.read_sql_query('''
+            SELECT * FROM gbv_records 
+            WHERE created_at BETWEEN ? AND ?
+            ORDER BY created_at DESC
+        ''', conn, params=(start_date, end_date))
+    conn.close()
+
+    output = BytesIO()
+    df.to_csv(output, index=False, encoding='utf-8')
+    output.seek(0)
+
+    filename = f"gbv_report_{period}_{datetime.now().strftime('%Y%m%d')}.csv"
+    return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
+
+@app.route('/export/excel')
+def export_excel():
+    period = request.args.get('period', 'all')
+    end_date = datetime.now()
+    start_date = None
+    if period != 'all':
+        if period == 'daily':
+            start_date = end_date - timedelta(days=1)
+        elif period == 'weekly':
+            start_date = end_date - timedelta(weeks=1)
+        elif period == 'monthly':
+            start_date = end_date.replace(day=1)
+        elif period == 'quarterly':
+            quarter_start_month = ((end_date.month - 1) // 3 * 3) + 1
+            start_date = end_date.replace(month=quarter_start_month, day=1)
+        elif period == 'yearly':
+            start_date = end_date.replace(month=1, day=1)
+
+    conn = get_db()
+    if period == 'all':
+        df = pd.read_sql_query('SELECT * FROM gbv_records ORDER BY created_at DESC', conn)
+    else:
+        df = pd.read_sql_query('''
+            SELECT * FROM gbv_records 
+            WHERE created_at BETWEEN ? AND ?
+            ORDER BY created_at DESC
+        ''', conn, params=(start_date, end_date))
+    conn.close()
+
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='GBV Records')
+    output.seek(0)
+
+    filename = f"gbv_report_{period}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True, download_name=filename)
+@app.route('/print-report')
+def print_report():
+    period = request.args.get('period', 'all')
+    end_date = datetime.now()
+    start_date = None
+    period_name = 'All Time'
+
+    if period == 'daily':
+        start_date = end_date - timedelta(days=1)
+        period_name = 'Daily'
+    elif period == 'weekly':
+        start_date = end_date - timedelta(weeks=1)
+        period_name = 'Weekly'
+    elif period == 'monthly':
+        start_date = end_date.replace(day=1)
+        period_name = 'Monthly'
+    elif period == 'quarterly':
+        quarter_start_month = ((end_date.month - 1) // 3 * 3) + 1
+        start_date = end_date.replace(month=quarter_start_month, day=1)
+        period_name = 'Quarterly'
+    elif period == 'yearly':
+        start_date = end_date.replace(month=1, day=1)
+        period_name = 'Yearly'
+
+    conn = get_db()
+    if period == 'all':
+        records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
+    else:
+        records_list = conn.execute('''
+            SELECT * FROM gbv_records 
+            WHERE created_at BETWEEN ? AND ?
+            ORDER BY created_at DESC
+        ''', (start_date, end_date)).fetchall()
+    conn.close()
+
+    # Format dates in Python instead of Jinja
+    printed_on = datetime.now().strftime('%d/%m/%Y %H:%M')
+    start_date_str = start_date.strftime('%d/%m/%Y') if start_date else 'All Time'
+    end_date_str = end_date.strftime('%d/%m/%Y')
+
+    return render_template('print_report.html', 
+                           records=records_list,
+                           period=period_name,
+                           start_date=start_date_str,
+                           end_date=end_date_str,
+                           printed_on=printed_on)
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,47 +1,152 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>GBV Records Management</h2>
-<form method="GET" class="row mb-3">
-    <div class="col-md-4">
-        <input type="text" class="form-control" name="search" placeholder="Search by name/ID" value="{{ search }}">
+<div class="container mt-4">
+    <h2 class="mb-4">
+        GBV {{ period }} Report
+        {% if period != 'All Time' %}
+        ({{ start_date }} to {{ end_date }})
+        {% endif %}
+    </h2>
+
+    <!-- Period Filter Buttons -->
+    <div class="mb-4">
+        <a href="/reports?period=all" class="btn btn-outline-primary btn-sm {% if current_period == 'all' %}active{% endif %}">All Time</a>
+        <a href="/reports?period=daily" class="btn btn-outline-primary btn-sm {% if current_period == 'daily' %}active{% endif %}">Daily</a>
+        <a href="/reports?period=weekly" class="btn btn-outline-primary btn-sm {% if current_period == 'weekly' %}active{% endif %}">Weekly</a>
+        <a href="/reports?period=monthly" class="btn btn-outline-primary btn-sm {% if current_period == 'monthly' %}active{% endif %}">Monthly</a>
+        <a href="/reports?period=quarterly" class="btn btn-outline-primary btn-sm {% if current_period == 'quarterly' %}active{% endif %}">Quarterly</a>
+        <a href="/reports?period=yearly" class="btn btn-outline-primary btn-sm {% if current_period == 'yearly' %}active{% endif %}">Yearly</a>
     </div>
-    <div class="col-md-3">
-        <select class="form-select" name="gender">
-            <option value="">All Genders</option>
-            <option value="M" {% if gender_filter == 'M' %}selected{% endif %}>Male</option>
-            <option value="F" {% if gender_filter == 'F' %}selected{% endif %}>Female</option>
-            <option value="O" {% if gender_filter == 'O' %}selected{% endif %}>Other</option>
-        </select>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th rowspan="2">Serial No.</th>
+                    <th rowspan="2">Arrival Date & Time</th>
+                    <th rowspan="2">National ID</th>
+                    <th rowspan="2">Client Name</th>
+                    <th rowspan="2">Age</th>
+                    <th rowspan="2">Sex</th>
+                    <th rowspan="2">Address</th>
+                    <th rowspan="2">Contact No.</th>
+                    <th rowspan="2">Next of Kin</th>
+                    <th rowspan="2">OVC</th>
+                    <th rowspan="2">Marital Status</th>
+                    <th rowspan="2">Incident Date & Time</th>
+                    <th rowspan="2">Type of Violence</th>
+                    <th rowspan="2">Perpetrator Relation</th>
+                    <th rowspan="2">Type of Case</th>
+                    <th rowspan="2">Disability</th>
+                    <th rowspan="2">P3 Form</th>
+                    
+                    <th colspan="8">Initial Lab Tests</th>
+                    <th colspan="8">Initial Treatments</th>
+                    <th rowspan="2">Referral</th>
+                    <th rowspan="2">Facility</th>
+                    
+                    <th colspan="4">2 Weeks</th>
+                    <th colspan="5">1 Month</th>
+                    <th colspan="4">3 Months</th>
+                    <th colspan="4">6 Months</th>
+                    <th rowspan="2">Outcome</th>
+                    <th rowspan="2">Created At</th>
+                </tr>
+                <tr>
+                    <th>HIV</th><th>Preg</th><th>Anal Swab</th><th>HVS</th>
+                    <th>Sperm</th><th>Urine</th><th>Hep B</th><th>Syph</th>
+                    
+                    <th>ECP</th><th>PEP</th><th>STI Tx</th><th>Trauma C</th>
+                    <th>Adh C</th><th>TT</th><th>Hep V</th><th>Syph Tx</th>
+                    
+                    <th>Return</th><th>PEP Refill</th><th>HIV</th><th>Preg</th>
+                    
+                    <th>Return</th><th>PEP Refill</th><th>PEP Comp</th><th>HIV</th><th>Preg</th>
+                    
+                    <th>Return</th><th>HIV</th><th>Hep B</th><th>Syph</th>
+                    
+                    <th>Return</th><th>HIV</th><th>Hep B</th><th>Syph</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if records|length == 0 %}
+                <tr>
+                    <td colspan="50" class="text-center text-muted">No records found for this period.</td>
+                </tr>
+                {% else %}
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.serial_no or '' }}</td>
+                    <td>{{ record.arrival_datetime or '' }}</td>
+                    <td>{{ record.national_id or '' }}</td>
+                    <td>{{ record.client_name or '' }}</td>
+                    <td>{{ record.age or '' }}</td>
+                    <td>{{ record.sex or '' }}</td>
+                    <td>{{ record.address or '' }}</td>
+                    <td>{{ record.contact_no or '' }}</td>
+                    <td>{{ record.next_of_kin or '' }}</td>
+                    <td>{{ record.ovc or '' }}</td>
+                    <td>{{ record.marital_status or '' }}</td>
+                    <td>{{ record.incident_datetime or '' }}</td>
+                    <td>{{ record.type_violence or '' }}</td>
+                    <td>{{ record.perpetrator_relation or '' }}</td>
+                    <td>{{ record.type_case or '' }}</td>
+                    <td>{{ record.disability or '' }}</td>
+                    <td>{{ record.p3_form or '' }}</td>
+                    
+                    <td>{{ record.hiv_test_initial or '' }}</td>
+                    <td>{{ record.pregnancy_test or '' }}</td>
+                    <td>{{ record.anal_swab or '' }}</td>
+                    <td>{{ record.hvs or '' }}</td>
+                    <td>{{ record.spermatozoa or '' }}</td>
+                    <td>{{ record.urinalysis or '' }}</td>
+                    <td>{{ record.hep_b_initial or '' }}</td>
+                    <td>{{ record.syphilis_initial or '' }}</td>
+                    
+                    <td>{{ record.ecp_given or '' }}</td>
+                    <td>{{ record.pep_given or '' }}</td>
+                    <td>{{ record.sti_treatment or '' }}</td>
+                    <td>{{ record.trauma_counseling_initial or '' }}</td>
+                    <td>{{ record.adherence_counseling_initial or '' }}</td>
+                    <td>{{ record.tt_given_initial or '' }}</td>
+                    <td>{{ record.hep_b_vaccine_initial or '' }}</td>
+                    <td>{{ record.syphilis_treatment or '' }}</td>
+                    <td>{{ record.referral_initial or '' }}</td>
+                    <td>{{ record.facility_name or '' }}</td>
+                    
+                    <td>{{ record.actual_return_2w or '' }}</td>
+                    <td>{{ record.pep_refill_2w or '' }}</td>
+                    <td>{{ record.hiv_2w or '' }}</td>
+                    <td>{{ record.pregnancy_2w or '' }}</td>
+                    
+                    <td>{{ record.actual_return_1m or '' }}</td>
+                    <td>{{ record.pep_refill_1m or '' }}</td>
+                    <td>{{ record.pep_completion or '' }}</td>
+                    <td>{{ record.hiv_1m or '' }}</td>
+                    <td>{{ record.pregnancy_1m or '' }}</td>
+                    
+                    <td>{{ record.actual_return_3m or '' }}</td>
+                    <td>{{ record.hiv_3m or '' }}</td>
+                    <td>{{ record.hep_b_3m or '' }}</td>
+                    <td>{{ record.syphilis_3m or '' }}</td>
+                    
+                    <td>{{ record.actual_return_6m or '' }}</td>
+                    <td>{{ record.hiv_6m or '' }}</td>
+                    <td>{{ record.hep_b_6m or '' }}</td>
+                    <td>{{ record.syphilis_6m or '' }}</td>
+                    
+                    <td>{{ record.client_outcome or '' }}</td>
+                    <td>{{ record.created_at }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
     </div>
-    <div class="col-md-5">
-        <button type="submit" class="btn btn-outline-primary">Filter</button>
+
+    <div class="mt-4">
+        <a href="/" class="btn btn-primary">← Back to Data Entry</a>
+        <a href="/records" class="btn btn-secondary ms-2">View All Records</a>
     </div>
-</form>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Serial No.</th>
-            <th>Name</th>
-            <th>Gender</th>
-            <th>Age</th>
-            <th>Arrival Date</th>
-            <th>Type of Violence</th>
-            <th>Referral</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for record in records %}
-        <tr>
-            <td>{{ record['serial_no'] }}</td>
-            <td>{{ record['client_name'] }}</td>
-            <td>{{ record['gender'] }}</td>
-            <td>{{ record['age'] }}</td>
-            <td>{{ record['arrival_date'] }}</td>
-            <td>{{ record['type_violence'] }}</td>
-            <td>{{ record['referral'] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<p><em>Total Records: {{ records|length }}</em></p>
+</div>
 {% endblock %}

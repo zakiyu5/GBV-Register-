@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GBV Register - {{ period }} Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            body { margin: 0.5cm; }
+            .no-print { display: none; }
+            table { font-size: 10px; }
+            th, td { padding: 4px !important; border: 1px solid #000 !important; }
+        }
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { border: 1px solid #333; text-align: center; vertical-align: middle; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        .header { text-align: center; margin-bottom: 20px; font-size: 14px; }
+        .title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">GENDER BASED VIOLENCE (GBV) REGISTER</div>
+        <div>Facility: Kayunga Hospital</div>
+        <div>Period: {{ period }} Report ({{ start_date }} to {{ end_date }})</div>
+        <div>HMIS MCH 061</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Serial No.</th>
+                <th rowspan="2">Arrival Date & Time</th>
+                <th rowspan="2">Client Name</th>
+                <th rowspan="2">Age</th>
+                <th rowspan="2">Sex</th>
+                <th rowspan="2">Incident Date & Time</th>
+                <th rowspan="2">Type of Violence</th>
+                <th rowspan="2">Perpetrator Relation</th>
+                <th rowspan="2">Type of Case</th>
+                <th rowspan="2">P3 Form</th>
+                
+                <th colspan="5">Initial Tests</th>
+                <th colspan="6">Initial Treatment</th>
+                <th rowspan="2">Referral</th>
+                
+                <th colspan="4">2 Weeks</th>
+                <th colspan="5">1 Month</th>
+                <th colspan="4">3 Months</th>
+                <th colspan="4">6 Months</th>
+                <th rowspan="2">Outcome</th>
+            </tr>
+            <tr>
+                <th>HIV</th><th>Preg</th><th>Anal</th><th>HVS</th><th>Sperm</th>
+                <th>ECP</th><th>PEP</th><th>STI</th><th>Counsel</th><th>TT</th><th>Hep B V</th>
+                
+                <th>Return</th><th>PEP Refill</th><th>HIV</th><th>Preg</th>
+                <th>Return</th><th>PEP Refill</th><th>PEP Comp</th><th>HIV</th><th>Preg</th>
+                <th>Return</th><th>HIV</th><th>Hep B</th><th>Syph</th>
+                <th>Return</th><th>HIV</th><th>Hep B</th><th>Syph</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if records|length == 0 %}
+            <tr><td colspan="30" style="text-align:center; padding:20px;">No records found for this period</td></tr>
+            {% else %}
+            {% for r in records %}
+            <tr>
+                <td>{{ r.serial_no or '' }}</td>
+                <td>{{ r.arrival_datetime or '' }}</td>
+                <td>{{ r.client_name or '' }}</td>
+                <td>{{ r.age or '' }}</td>
+                <td>{{ r.sex or '' }}</td>
+                <td>{{ r.incident_datetime or '' }}</td>
+                <td>{{ r.type_violence or '' }}</td>
+                <td>{{ r.perpetrator_relation or '' }}</td>
+                <td>{{ r.type_case or '' }}</td>
+                <td>{{ r.p3_form or '' }}</td>
+                
+                <td>{{ r.hiv_test_initial or '' }}</td>
+                <td>{{ r.pregnancy_test or '' }}</td>
+                <td>{{ r.anal_swab or '' }}</td>
+                <td>{{ r.hvs or '' }}</td>
+                <td>{{ r.spermatozoa or '' }}</td>
+                
+                <td>{{ r.ecp_given or '' }}</td>
+                <td>{{ r.pep_given or '' }}</td>
+                <td>{{ r.sti_treatment or '' }}</td>
+                <td>{{ r.trauma_counseling_initial or '' }}</td>
+                <td>{{ r.tt_given_initial or '' }}</td>
+                <td>{{ r.hep_b_vaccine_initial or '' }}</td>
+                <td>{{ r.referral_initial or '' }}</td>
+                
+                <td>{{ r.actual_return_2w or '' }}</td>
+                <td>{{ r.pep_refill_2w or '' }}</td>
+                <td>{{ r.hiv_2w or '' }}</td>
+                <td>{{ r.pregnancy_2w or '' }}</td>
+                
+                <td>{{ r.actual_return_1m or '' }}</td>
+                <td>{{ r.pep_refill_1m or '' }}</td>
+                <td>{{ r.pep_completion or '' }}</td>
+                <td>{{ r.hiv_1m or '' }}</td>
+                <td>{{ r.pregnancy_1m or '' }}</td>
+                
+                <td>{{ r.actual_return_3m or '' }}</td>
+                <td>{{ r.hiv_3m or '' }}</td>
+                <td>{{ r.hep_b_3m or '' }}</td>
+                <td>{{ r.syphilis_3m or '' }}</td>
+                
+                <td>{{ r.actual_return_6m or '' }}</td>
+                <td>{{ r.hiv_6m or '' }}</td>
+                <td>{{ r.hep_b_6m or '' }}</td>
+                <td>{{ r.syphilis_6m or '' }}</td>
+                
+                <td>{{ r.client_outcome or '' }}</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 50px; text-align: right;">
+        <p>Printed on: {{ printed_on }}</p>
+        <p>Generated by Digital GBV Register System</p>
+    </div>
+
+    <script>
+        window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

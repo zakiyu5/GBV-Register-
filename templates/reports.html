@@ -33,5 +33,17 @@
         {% endfor %}
     </tbody>
 </table>
-<button class="btn btn-primary" onclick="window.print()">Export to PDF</button>
-{% endblock %}
+<div class="mt-4">
+    <a href="/" class="btn btn-primary">← Back to Data Entry</a>
+    <a href="/records" class="btn btn-secondary ms-2">View All Records</a>
+
+    <!-- Export Buttons -->
+    <div class="btn-group ms-3" role="group">
+        <a href="/export/csv?period={{ current_period }}" class="btn btn-success">Download CSV</a>
+        <a href="/export/excel?period={{ current_period }}" class="btn btn-info text-white">Download Excel</a>
+    </div>
+
+    <!-- Optional: Quick Print Button (uses browser print → save as PDF) -->
+    <a href="/print-report?period={{ current_period }}" target="_blank" class="btn btn-outline-danger ms-2">
+        Print Official Register (PDF)
+    </a></div>{% endblock %}
