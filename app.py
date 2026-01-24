@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'gbv_secret_key_2026'  # Change this in production!
+app.secret_key = 'gbv_secret_key_2026'  # Changing  this in production!
 
 # Database
 DB_NAME = 'gbv.db'
@@ -190,7 +190,7 @@ def login():
         conn.close()
 
         # ────────────────────────────────────────────────
-        # This is the safe check – never access user['...'] if user is None
+        # This is the safe check – never accessing  user['...'] if user is None
         if user is None or not check_password_hash(user['password'], password):
             flash('Invalid username or password.', 'danger')
             return render_template('login.html')
@@ -390,7 +390,7 @@ def data_entry():
     
     return render_template('form.html')
 
-# Other routes remain the same, but add @login_required to them
+# Other routes remain the same, but we add @login_required to them
 @app.route('/records')
 @login_required
 def records():
@@ -530,7 +530,7 @@ def dashboard():
 @login_required
 def export_csv():
     period = request.args.get('period', 'all')
-    # Reuse the same logic as reports to get the correct records
+    # Reusing the same logic as reports to get the correct records
     end_date = datetime.now()
     start_date = None
     if period != 'all':
@@ -630,7 +630,7 @@ def print_report():
             ORDER BY created_at DESC
         ''', (start_date, end_date)).fetchall()
     conn.close()
-    # Format dates in Python instead of Jinja
+    # Formating dates in Python instead of Jinja
     printed_on = datetime.now().strftime('%d/%m/%Y %H:%M')
     start_date_str = start_date.strftime('%d/%m/%Y') if start_date else 'All Time'
     end_date_str = end_date.strftime('%d/%m/%Y')
