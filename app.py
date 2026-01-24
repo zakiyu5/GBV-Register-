@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, send_file
+from flask import Flask, render_template, request, flash, redirect, url_for, send_file, session
 import sqlite3
 from datetime import datetime, timedelta
 import json
 import pandas as pd
 from io import BytesIO
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'gbv_secret_key_2026'  # Change this in production!
@@ -15,7 +17,7 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Full schema matching HMIS MCH 061 Gender-Based Violence Register
+    # GBV Records Table (same as before)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS gbv_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +73,6 @@ def init_db():
             tt_2w TEXT,
             syphilis_2w TEXT,
             referral_update_2w TEXT,
-
             -- 1 Month Follow-up
             actual_return_1m TEXT,
             next_appointment_1m TEXT,
@@ -88,7 +89,6 @@ def init_db():
             tt_1m TEXT,
             syphilis_1m TEXT,
             referral_update_1m TEXT,
-
             -- 3 Months Follow-up
             actual_return_3m TEXT,
             next_appointment_3m TEXT,
@@ -103,7 +103,6 @@ def init_db():
             hep_b_3rd_3m TEXT,
             pregnancy_3m TEXT,
             referral_update_3m TEXT,
-
             -- 6 Months Follow-up
             actual_return_6m TEXT,
             next_appointment_6m TEXT,
@@ -114,14 +113,30 @@ def init_db():
             syphilis_6m TEXT,
             referral_update_6m TEXT,
             client_outcome TEXT,
-
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Users Table for Authentication
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL  -- 'admin' or 'nurse'
+        )
+    ''')
+    
+    # Create default admin if not exists
+    cursor.execute("SELECT * FROM users WHERE username = 'admin'")
+    if not cursor.fetchone():
+        hashed_pw = generate_password_hash('adminpassword')  # Change this!
+        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', hashed_pw, 'admin'))
+    
     conn.commit()
     conn.close()
 
-init_db()  # Creates the table on first run
+init_db()  # Creates the tables on first run
 
 def get_db():
     conn = sqlite3.connect(DB_NAME)
@@ -141,7 +156,105 @@ def to_int(val, default=0):
     except:
         return default
 
-@app.route('/', methods=['GET', 'POST'])
+# Login Required Decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Admin Required Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_role' not in session or session['user_role'] != 'admin':
+            flash('Admin access required.', 'danger')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        conn = get_db()
+        user = conn.execute(
+            'SELECT * FROM users WHERE username = ?',
+            (username,)
+        ).fetchone()
+        conn.close()
+
+        # ────────────────────────────────────────────────
+        # This is the safe check – never access user['...'] if user is None
+        if user is None or not check_password_hash(user['password'], password):
+            flash('Invalid username or password.', 'danger')
+            return render_template('login.html')
+
+        # Success
+        session['user_id'] = user['id']
+        session['user_role'] = user['role']
+        flash('Logged in successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/admin/users', methods=['GET', 'POST'])
+@admin_required
+def manage_users():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role')  # 'admin' or 'nurse'
+
+        if role not in ['admin', 'nurse']:
+            flash('Invalid role selected.', 'danger')
+            return redirect(url_for('manage_users'))
+
+        hashed_pw = generate_password_hash(password)
+        conn = get_db()
+        try:
+            conn.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+                        (username, hashed_pw, role))
+            conn.commit()
+            flash(f'{role.capitalize()} account created successfully!', 'success')
+        except sqlite3.IntegrityError:
+            flash('Username already exists.', 'danger')
+        finally:
+            conn.close()
+        return redirect(url_for('manage_users'))
+
+    conn = get_db()
+    users = conn.execute('SELECT id, username, role FROM users ORDER BY role, username').fetchall()
+    conn.close()
+    return render_template('manage_users.html', users=users)
+
+@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    conn = get_db()
+    conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    flash('User deleted successfully.', 'success')
+    return redirect(url_for('manage_users'))
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/data_entry', methods=['GET', 'POST'])
+@login_required
 def data_entry():
     if request.method == 'POST':
         conn = get_db()
@@ -186,7 +299,6 @@ def data_entry():
                 request.form.get('syphilis_treatment'),
                 request.form.get('referral_initial'),
                 request.form.get('facility_name'),
-
                 # 2 Weeks
                 request.form.get('actual_return_2w') or None,
                 request.form.get('next_appointment_2w') or None,
@@ -202,7 +314,6 @@ def data_entry():
                 request.form.get('tt_2w'),
                 request.form.get('syphilis_2w'),
                 request.form.get('referral_update_2w'),
-
                 # 1 Month
                 request.form.get('actual_return_1m') or None,
                 request.form.get('next_appointment_1m') or None,
@@ -219,7 +330,6 @@ def data_entry():
                 request.form.get('tt_1m'),
                 request.form.get('syphilis_1m'),
                 request.form.get('referral_update_1m'),
-
                 # 3 Months
                 request.form.get('actual_return_3m') or None,
                 request.form.get('next_appointment_3m') or None,
@@ -234,7 +344,6 @@ def data_entry():
                 request.form.get('hep_b_3rd_3m'),
                 request.form.get('pregnancy_3m'),
                 request.form.get('referral_update_3m'),
-
                 # 6 Months
                 request.form.get('actual_return_6m') or None,
                 request.form.get('next_appointment_6m') or None,
@@ -247,7 +356,6 @@ def data_entry():
                 request.form.get('client_outcome'),
                 now
             )
-
             cursor.execute('''
                 INSERT INTO gbv_records (
                     serial_no, arrival_datetime, national_id, client_name, address, contact_no, next_of_kin, ovc, age, sex,
@@ -282,7 +390,9 @@ def data_entry():
     
     return render_template('form.html')
 
+# Other routes remain the same, but add @login_required to them
 @app.route('/records')
+@login_required
 def records():
     conn = get_db()
     records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
@@ -290,12 +400,12 @@ def records():
     return render_template('records.html', records=records_list)
 
 @app.route('/reports')
+@login_required
 def reports():
-    period = request.args.get('period', 'all')  # all/daily/weekly/monthly/quarterly/yearly
+    period = request.args.get('period', 'all') # all/daily/weekly/monthly/quarterly/yearly
     end_date = datetime.now()
     start_date = None
     period_name = 'All Time'
-
     if period == 'daily':
         start_date = end_date - timedelta(days=1)
         period_name = 'Daily'
@@ -312,19 +422,17 @@ def reports():
     elif period == 'yearly':
         start_date = end_date.replace(month=1, day=1)
         period_name = 'Yearly'
-
     conn = get_db()
     if period == 'all':
         records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
     else:
         records_list = conn.execute('''
-            SELECT * FROM gbv_records 
+            SELECT * FROM gbv_records
             WHERE created_at BETWEEN ? AND ?
             ORDER BY created_at DESC
         ''', (start_date, end_date)).fetchall()
     conn.close()
-
-    return render_template('reports.html', 
+    return render_template('reports.html',
                            records=records_list,
                            period=period_name,
                            start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
@@ -332,6 +440,7 @@ def reports():
                            current_period=period)
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     # Default: last 30 days
     start_date_str = request.args.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
@@ -339,86 +448,74 @@ def dashboard():
     
     try:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)  # inclusive
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1) # inclusive
     except:
         start_date = datetime.now() - timedelta(days=30)
         end_date = datetime.now() + timedelta(days=1)
         start_date_str = start_date.strftime('%Y-%m-%d')
         end_date_str = datetime.now().strftime('%Y-%m-%d')
-
     conn = get_db()
     cursor = conn.cursor()
-
     # === KPIs ===
     cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE created_at BETWEEN ? AND ?', (start_date, end_date))
     total_cases = cursor.fetchone()[0] or 0
-
     cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE sex = "F" AND created_at BETWEEN ? AND ?', (start_date, end_date))
     female_count = cursor.fetchone()[0] or 0
     female_pct = round((female_count / total_cases * 100) if total_cases > 0 else 0, 1)
-
     cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE age < 18 AND created_at BETWEEN ? AND ?', (start_date, end_date))
     minors_count = cursor.fetchone()[0] or 0
     minors_pct = round((minors_count / total_cases * 100) if total_cases > 0 else 0, 1)
-
     cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE pep_given = "Y" AND created_at BETWEEN ? AND ?', (start_date, end_date))
     pep_count = cursor.fetchone()[0] or 0
     pep_pct = round((pep_count / total_cases * 100) if total_cases > 0 else 0, 1)
-
     cursor.execute('SELECT COUNT(*) FROM gbv_records WHERE referral_initial IN ("1","2","3","4","5","6") AND created_at BETWEEN ? AND ?', (start_date, end_date))
     referred_count = cursor.fetchone()[0] or 0
     referred_pct = round((referred_count / total_cases * 100) if total_cases > 0 else 0, 1)
-
     # === Charts Data ===
     # 1. Cases over time (monthly)
     cursor.execute('''
-        SELECT strftime('%Y-%m', created_at) as month, COUNT(*) 
-        FROM gbv_records 
-        WHERE created_at BETWEEN ? AND ? 
+        SELECT strftime('%Y-%m', created_at) as month, COUNT(*)
+        FROM gbv_records
+        WHERE created_at BETWEEN ? AND ?
         GROUP BY month ORDER BY month
     ''', (start_date, end_date))
     time_data = cursor.fetchall()
     time_labels = [row[0] for row in time_data]
     time_values = [row[1] for row in time_data]
-
     # 2. Type of Violence
     cursor.execute('''
-        SELECT type_violence, COUNT(*) 
-        FROM gbv_records 
-        WHERE created_at BETWEEN ? AND ? 
+        SELECT type_violence, COUNT(*)
+        FROM gbv_records
+        WHERE created_at BETWEEN ? AND ?
         GROUP BY type_violence
     ''', (start_date, end_date))
     violence_data = cursor.fetchall()
     violence_labels = [row[0] or 'Unknown' for row in violence_data]
     violence_values = [row[1] for row in violence_data]
-
     # 3. Age Groups
     cursor.execute('''
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN age < 10 THEN '0-9'
                 WHEN age BETWEEN 10 AND 17 THEN '10-17'
                 WHEN age BETWEEN 18 AND 24 THEN '18-24'
                 WHEN age BETWEEN 25 AND 49 THEN '25-49'
                 ELSE '50+'
-            END as age_group, 
+            END as age_group,
             COUNT(*)
-        FROM gbv_records 
-        WHERE created_at BETWEEN ? AND ? 
+        FROM gbv_records
+        WHERE created_at BETWEEN ? AND ?
         GROUP BY age_group
     ''', (start_date, end_date))
     age_data = cursor.fetchall()
     age_labels = [row[0] for row in age_data]
     age_values = [row[1] for row in age_data]
-
     conn.close()
-
     chart_data = {
         'time': {'labels': time_labels, 'values': time_values},
         'violence': {'labels': violence_labels, 'values': violence_values},
         'age': {'labels': age_labels, 'values': age_values}
     }
-
     return render_template('dashboard.html',
                            total_cases=total_cases,
                            female_pct=female_pct,
@@ -430,6 +527,7 @@ def dashboard():
                            end_date=end_date_str)
 
 @app.route('/export/csv')
+@login_required
 def export_csv():
     period = request.args.get('period', 'all')
     # Reuse the same logic as reports to get the correct records
@@ -447,26 +545,24 @@ def export_csv():
             start_date = end_date.replace(month=quarter_start_month, day=1)
         elif period == 'yearly':
             start_date = end_date.replace(month=1, day=1)
-
     conn = get_db()
     if period == 'all':
         df = pd.read_sql_query('SELECT * FROM gbv_records ORDER BY created_at DESC', conn)
     else:
         df = pd.read_sql_query('''
-            SELECT * FROM gbv_records 
+            SELECT * FROM gbv_records
             WHERE created_at BETWEEN ? AND ?
             ORDER BY created_at DESC
         ''', conn, params=(start_date, end_date))
     conn.close()
-
     output = BytesIO()
     df.to_csv(output, index=False, encoding='utf-8')
     output.seek(0)
-
     filename = f"gbv_report_{period}_{datetime.now().strftime('%Y%m%d')}.csv"
     return send_file(output, mimetype='text/csv', as_attachment=True, download_name=filename)
 
 @app.route('/export/excel')
+@login_required
 def export_excel():
     period = request.args.get('period', 'all')
     end_date = datetime.now()
@@ -483,33 +579,31 @@ def export_excel():
             start_date = end_date.replace(month=quarter_start_month, day=1)
         elif period == 'yearly':
             start_date = end_date.replace(month=1, day=1)
-
     conn = get_db()
     if period == 'all':
         df = pd.read_sql_query('SELECT * FROM gbv_records ORDER BY created_at DESC', conn)
     else:
         df = pd.read_sql_query('''
-            SELECT * FROM gbv_records 
+            SELECT * FROM gbv_records
             WHERE created_at BETWEEN ? AND ?
             ORDER BY created_at DESC
         ''', conn, params=(start_date, end_date))
     conn.close()
-
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='GBV Records')
     output.seek(0)
-
     filename = f"gbv_report_{period}_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                      as_attachment=True, download_name=filename)
+
 @app.route('/print-report')
+@login_required
 def print_report():
     period = request.args.get('period', 'all')
     end_date = datetime.now()
     start_date = None
     period_name = 'All Time'
-
     if period == 'daily':
         start_date = end_date - timedelta(days=1)
         period_name = 'Daily'
@@ -526,28 +620,26 @@ def print_report():
     elif period == 'yearly':
         start_date = end_date.replace(month=1, day=1)
         period_name = 'Yearly'
-
     conn = get_db()
     if period == 'all':
         records_list = conn.execute('SELECT * FROM gbv_records ORDER BY created_at DESC').fetchall()
     else:
         records_list = conn.execute('''
-            SELECT * FROM gbv_records 
+            SELECT * FROM gbv_records
             WHERE created_at BETWEEN ? AND ?
             ORDER BY created_at DESC
         ''', (start_date, end_date)).fetchall()
     conn.close()
-
     # Format dates in Python instead of Jinja
     printed_on = datetime.now().strftime('%d/%m/%Y %H:%M')
     start_date_str = start_date.strftime('%d/%m/%Y') if start_date else 'All Time'
     end_date_str = end_date.strftime('%d/%m/%Y')
-
-    return render_template('print_report.html', 
+    return render_template('print_report.html',
                            records=records_list,
                            period=period_name,
                            start_date=start_date_str,
                            end_date=end_date_str,
                            printed_on=printed_on)
+
 if __name__ == '__main__':
     app.run(debug=True)

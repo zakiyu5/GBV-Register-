@@ -1,660 +1,703 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>GBV Data Entry Form</h2>
-<form method="POST" class="row g-3">
-    <div class="col-md-6">
-        <label class="form-label">Serial No.</label>
-        <input type="text" class="form-control" name="serial_no" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Arrival Date & Time</label>
-        <input type="datetime-local" class="form-control" name="arrival_datetime" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">National ID</label>
-        <input type="text" class="form-control" name="national_id" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Client Name</label>
-        <input type="text" class="form-control" name="client_name" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Address</label>
-        <input type="text" class="form-control" name="address" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Contact No.</label>
-        <input type="tel" class="form-control" name="contact_no" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Next of Kin Contact</label>
-        <input type="text" class="form-control" name="next_of_kin" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Client Category OVC</label>
-        <select class="form-select" name="ovc" required>
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Age</label>
-        <input type="number" class="form-control" name="age" required min="0">
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Sex</label>
-        <select class="form-select" name="sex" required>
-            <option value="">Select</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Marital Status</label>
-        <select class="form-select" name="marital_status" required>
-            <option value="">Select</option>
-            <option value="1">Single</option>
-            <option value="2">Married</option>
-            <option value="3">Divorced</option>
-            <option value="4">Separated</option>
-            <option value="5">Widowed</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date & Time of Reported Incident</label>
-        <input type="datetime-local" class="form-control" name="incident_datetime" required>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Medical History & Examination Form Filled</label>
-        <input type="date" class="form-control" name="medical_form_filled">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Police Report P3 Form Filled</label>
-        <select class="form-select" name="p3_form" required>
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Survivor Disability</label>
-        <select class="form-select" name="disability" required>
-            <option value="">Select</option>
-            <option value="NA">Not Applicable</option>
-            <option value="1">Hearing Impairment</option>
-            <option value="2">Visual Impairment</option>
-            <option value="3">Physical Impairment</option>
-            <option value="4">Mental</option>
-            <option value="5">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Perpetrator Relationship</label>
-        <select class="form-select" name="perpetrator_relation" required>
-            <option value="">Select</option>
-            <option value="1">Family Member</option>
-            <option value="2">Intimate Partner</option>
-            <option value="3">Stranger</option>
-            <option value="4">Friend/Acquaintance</option>
-            <option value="5">Authority Figure</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Type of Violence</label>
-        <select class="form-select" name="type_violence" required>
-            <option value="">Select</option>
-            <option value="1">Physical</option>
-            <option value="2">Sexual</option>
-            <option value="3">Emotional</option>
-            <option value="4">Economic</option>
-            <option value="5">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Type of Case</label>
-        <select class="form-select" name="type_case" required>
-            <option value="">Select</option>
-            <option value="N">New</option>
-            <option value="R">Repeat</option>
-        </select>
-    </div>
-    <!-- Lab Tests -->
-    <div class="col-12"><h3>Laboratory Tests</h3></div>
-    <div class="col-md-4">
-        <label class="form-label">HIV Test Initial</label>
-        <select class="form-select" name="hiv_test_initial" required>
-            <option value="">Select</option>
-            <option value="N">Negative</option>
-            <option value="P">Positive</option>
-            <option value="KP">Known Positive</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Pregnancy Test</label>
-        <select class="form-select" name="pregnancy_test" required>
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-            <option value="NA">Not Applicable</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Anal Swab</label>
-        <select class="form-select" name="anal_swab">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">High Vaginal Swab (HVS)</label>
-        <select class="form-select" name="hvs">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Spermatozoa Microscopy</label>
-        <select class="form-select" name="spermatozoa">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Urinalysis</label>
-        <select class="form-select" name="urinalysis">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Hepatitis B</label>
-        <select class="form-select" name="hep_b_initial">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Syphilis</label>
-        <select class="form-select" name="syphilis_initial">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <!-- Treatments -->
-    <div class="col-12"><h3>Treatments and Interventions</h3></div>
-    <div class="col-md-4">
-        <label class="form-label">Emergency Contraceptive Given</label>
-        <select class="form-select" name="ecp_given">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-            <option value="NA">Not Applicable</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">PEP Given (Within 72h)</label>
-        <select class="form-select" name="pep_given" required>
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">STI Treatment Given</label>
-        <select class="form-select" name="sti_treatment">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Trauma Counseling</label>
-        <select class="form-select" name="trauma_counseling_initial">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Adherence Counseling</label>
-        <select class="form-select" name="adherence_counseling_initial">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Tetanus Toxoid (TT) Given</label>
-        <select class="form-select" name="tt_given_initial">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Hep B Vaccine Given</label>
-        <select class="form-select" name="hep_b_vaccine_initial">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Syphilis Testing/Treatment</label>
-        <select class="form-select" name="syphilis_treatment">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Referral Made</label>
-        <select class="form-select" name="referral_initial">
-            <option value="">Select</option>
-            <option value="1">Health Facility</option>
-            <option value="2">Police</option>
-            <option value="3">Legal Aid</option>
-            <option value="4">Children's Department</option>
-            <option value="5">Shelter</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <!-- Follow-up Sections -->
-    <div class="col-12"><h3>2 Weeks Follow-up</h3></div>
-    <div class="col-md-6">
-        <label class="form-label">Actual Return Date</label>
-        <input type="date" class="form-control" name="actual_return_2w">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date of Next Appointment</label>
-        <input type="date" class="form-control" name="next_appointment_2w">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral To</label>
-        <select class="form-select" name="referral_2w">
-            <option value="">Select</option>
-            <option value="1">Health Facility</option>
-            <option value="2">Police</option>
-            <option value="3">Legal Aid</option>
-            <option value="4">Children's Department</option>
-            <option value="5">Shelter</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Trauma Counseling</label>
-        <select class="form-select" name="trauma_2w">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Adherence to PEP Counseling</label>
-        <select class="form-select" name="adherence_2w">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">PEP Refill</label>
-        <select class="form-select" name="pep_refill_2w">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">HIV Test Results</label>
-        <select class="form-select" name="hiv_2w">
-            <option value="">Select</option>
-            <option value="N">Negative</option>
-            <option value="P">Positive</option>
-            <option value="KP">Known Positive</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Pregnancy Diagnostic Test</label>
-        <select class="form-select" name="pregnancy_2w">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-            <option value="NA">Not Applicable</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hb (Hemoglobin Level)</label>
-        <input type="number" class="form-control" name="hb_2w" step="0.1">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">ALT</label>
-        <input type="number" class="form-control" name="alt_2w">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hep B Vaccine (1st Dose)</label>
-        <select class="form-select" name="hep_b_1st_2w">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Tetanus (TT)</label>
-        <select class="form-select" name="tt_2w">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Syphilis Test Result</label>
-        <select class="form-select" name="syphilis_2w">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral Update</label>
-        <input type="text" class="form-control" name="referral_update_2w">
-    </div>
-    <!-- 1 Month Follow-up -->
-    <div class="col-12"><h3>1 Month Follow-up</h3></div>
-    <div class="col-md-6">
-        <label class="form-label">Actual Return Date</label>
-        <input type="date" class="form-control" name="actual_return_1m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date of Next Appointment</label>
-        <input type="date" class="form-control" name="next_appointment_1m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral To</label>
-        <select class="form-select" name="referral_1m">
-            <option value="">Select</option>
-            <option value="1">Health Facility</option>
-            <option value="2">Police</option>
-            <option value="3">Legal Aid</option>
-            <option value="4">Children's Department</option>
-            <option value="5">Shelter</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Trauma Counseling</label>
-        <select class="form-select" name="trauma_1m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Adherence to PEP Counseling</label>
-        <select class="form-select" name="adherence_1m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">PEP Refill</label>
-        <select class="form-select" name="pep_refill_1m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">PEP Completion</label>
-        <select class="form-select" name="pep_completion">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">HIV Test Results</label>
-        <select class="form-select" name="hiv_1m">
-            <option value="">Select</option>
-            <option value="N">Negative</option>
-            <option value="P">Positive</option>
-            <option value="KP">Known Positive</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Pregnancy Diagnostic Test</label>
-        <select class="form-select" name="pregnancy_1m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-            <option value="NA">Not Applicable</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hb (Hemoglobin Level)</label>
-        <input type="number" class="form-control" name="hb_1m" step="0.1">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">ALT</label>
-        <input type="number" class="form-control" name="alt_1m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hep B Vaccine (2nd Dose)</label>
-        <select class="form-select" name="hep_b_2nd_1m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Tetanus (TT)</label>
-        <select class="form-select" name="tt_1m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Syphilis Test Result</label>
-        <select class="form-select" name="syphilis_1m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral Update</label>
-        <input type="text" class="form-control" name="referral_update_1m">
-    </div>
-    <!-- 3 Months Follow-up -->
-    <div class="col-12"><h3>3 Months Follow-up</h3></div>
-    <div class="col-md-6">
-        <label class="form-label">Actual Return Date</label>
-        <input type="date" class="form-control" name="actual_return_3m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date of Next Appointment</label>
-        <input type="date" class="form-control" name="next_appointment_3m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral To</label>
-        <select class="form-select" name="referral_3m">
-            <option value="">Select</option>
-            <option value="1">Health Facility</option>
-            <option value="2">Police</option>
-            <option value="3">Legal Aid</option>
-            <option value="4">Children's Department</option>
-            <option value="5">Shelter</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Trauma Counseling</label>
-        <select class="form-select" name="trauma_3m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Adherence to PEP Counseling</label>
-        <select class="form-select" name="adherence_3m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">HIV Test Results</label>
-        <select class="form-select" name="hiv_3m">
-            <option value="">Select</option>
-            <option value="N">Negative</option>
-            <option value="P">Positive</option>
-            <option value="KP">Known Positive</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hepatitis B Results</label>
-        <select class="form-select" name="hep_b_3m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Syphilis Results</label>
-        <select class="form-select" name="syphilis_3m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hb (Hemoglobin Level)</label>
-        <input type="number" class="form-control" name="hb_3m" step="0.1">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">ALT</label>
-        <input type="number" class="form-control" name="alt_3m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hep B Vaccine (3rd Dose)</label>
-        <select class="form-select" name="hep_b_3rd_3m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Pregnancy Test</label>
-        <select class="form-select" name="pregnancy_3m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-            <option value="NA">Not Applicable</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral Update</label>
-        <input type="text" class="form-control" name="referral_update_3m">
-    </div>
-    <!-- 6 Months Follow-up -->
-    <div class="col-12"><h3>6 Months Follow-up</h3></div>
-    <div class="col-md-6">
-        <label class="form-label">Actual Return Date</label>
-        <input type="date" class="form-control" name="actual_return_6m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Date of Next Appointment</label>
-        <input type="date" class="form-control" name="next_appointment_6m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral To</label>
-        <select class="form-select" name="referral_6m">
-            <option value="">Select</option>
-            <option value="1">Health Facility</option>
-            <option value="2">Police</option>
-            <option value="3">Legal Aid</option>
-            <option value="4">Children's Department</option>
-            <option value="5">Shelter</option>
-            <option value="6">Other</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Trauma Counseling</label>
-        <select class="form-select" name="trauma_6m">
-            <option value="">Select</option>
-            <option value="Y">Yes</option>
-            <option value="N">No</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">HIV Test Results</label>
-        <select class="form-select" name="hiv_6m">
-            <option value="">Select</option>
-            <option value="N">Negative</option>
-            <option value="P">Positive</option>
-            <option value="KP">Known Positive</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Hepatitis B Results</label>
-        <select class="form-select" name="hep_b_6m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Syphilis Results</label>
-        <select class="form-select" name="syphilis_6m">
-            <option value="">Select</option>
-            <option value="P">Positive</option>
-            <option value="N">Negative</option>
-            <option value="ND">Not Done</option>
-        </select>
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Referral Update</label>
-        <input type="text" class="form-control" name="referral_update_6m">
-    </div>
-    <div class="col-md-6">
-        <label class="form-label">Client Outcome</label>
-        <input type="text" class="form-control" name="client_outcome">
-    </div>
-    <div class="col-12">
-        <label class="form-label">Facility Name</label>
-        <input type="text" class="form-control" name="facility_name" value="Kayunga Hospital" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Submit Record</button>
-</form>
+<div class="container mt-4">
+    <h2 class="mb-4">GBV Data Entry Form</h2>
+    
+    <form method="POST" class="row g-3 needs-validation" novalidate>
+        
+        <!-- Core fields – keeping these required -->
+        <div class="col-md-6">
+            <label class="form-label">Serial No. <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="serial_no" required>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Arrival Date & Time <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" name="arrival_datetime" required>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Client Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="client_name" required>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Age <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" name="age" min="0" required>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Sex <span class="text-danger">*</span></label>
+            <select class="form-select" name="sex" required>
+                <option value="">Select</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+            </select>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Type of Violence <span class="text-danger">*</span></label>
+            <select class="form-select" name="type_violence" required>
+                <option value="">Select</option>
+                <option value="1">Physical</option>
+                <option value="2">Sexual</option>
+                <option value="3">Emotional</option>
+                <option value="4">Economic</option>
+                <option value="5">Other</option>
+            </select>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <!-- Everything below here is optional – nurse can leave blank -->
+
+        <div class="col-md-6">
+            <label class="form-label">National ID</label>
+            <input type="text" class="form-control" name="national_id">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-control" name="address">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Contact No.</label>
+            <input type="tel" class="form-control" name="contact_no">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Next of Kin Contact</label>
+            <input type="text" class="form-control" name="next_of_kin">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Client Category OVC</label>
+            <select class="form-select" name="ovc">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Marital Status</label>
+            <select class="form-select" name="marital_status">
+                <option value="">Select</option>
+                <option value="1">Single</option>
+                <option value="2">Married</option>
+                <option value="3">Divorced</option>
+                <option value="4">Separated</option>
+                <option value="5">Widowed</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Date & Time of Reported Incident</label>
+            <input type="datetime-local" class="form-control" name="incident_datetime">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Medical History & Examination Form Filled</label>
+            <input type="date" class="form-control" name="medical_form_filled">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Police Report P3 Form Filled</label>
+            <select class="form-select" name="p3_form">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Survivor Disability</label>
+            <select class="form-select" name="disability">
+                <option value="">Select</option>
+                <option value="NA">Not Applicable</option>
+                <option value="1">Hearing Impairment</option>
+                <option value="2">Visual Impairment</option>
+                <option value="3">Physical Impairment</option>
+                <option value="4">Mental</option>
+                <option value="5">Other</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Perpetrator Relationship</label>
+            <select class="form-select" name="perpetrator_relation">
+                <option value="">Select</option>
+                <option value="1">Family Member</option>
+                <option value="2">Intimate Partner</option>
+                <option value="3">Stranger</option>
+                <option value="4">Friend/Acquaintance</option>
+                <option value="5">Authority Figure</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Type of Case</label>
+            <select class="form-select" name="type_case">
+                <option value="">Select</option>
+                <option value="N">New</option>
+                <option value="R">Repeat</option>
+            </select>
+        </div>
+
+        <!-- Laboratory Tests -->
+        <div class="col-12 mt-4"><h3>Laboratory Tests</h3></div>
+        <div class="col-md-4">
+            <label class="form-label">HIV Test Initial</label>
+            <select class="form-select" name="hiv_test_initial">
+                <option value="">Select</option>
+                <option value="N">Negative</option>
+                <option value="P">Positive</option>
+                <option value="KP">Known Positive</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Pregnancy Test</label>
+            <select class="form-select" name="pregnancy_test">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+                <option value="NA">Not Applicable</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Anal Swab</label>
+            <select class="form-select" name="anal_swab">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">High Vaginal Swab (HVS)</label>
+            <select class="form-select" name="hvs">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Spermatozoa Microscopy</label>
+            <select class="form-select" name="spermatozoa">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Urinalysis</label>
+            <select class="form-select" name="urinalysis">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Hepatitis B</label>
+            <select class="form-select" name="hep_b_initial">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Syphilis</label>
+            <select class="form-select" name="syphilis_initial">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+
+        <!-- Treatments and Interventions -->
+        <div class="col-12 mt-4"><h3>Treatments and Interventions</h3></div>
+        <div class="col-md-4">
+            <label class="form-label">Emergency Contraceptive Given</label>
+            <select class="form-select" name="ecp_given">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+                <option value="NA">Not Applicable</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">PEP Given (Within 72h)</label>
+            <select class="form-select" name="pep_given">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">STI Treatment Given</label>
+            <select class="form-select" name="sti_treatment">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Trauma Counseling</label>
+            <select class="form-select" name="trauma_counseling_initial">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Adherence Counseling</label>
+            <select class="form-select" name="adherence_counseling_initial">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Tetanus Toxoid (TT) Given</label>
+            <select class="form-select" name="tt_given_initial">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Hep B Vaccine Given</label>
+            <select class="form-select" name="hep_b_vaccine_initial">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Syphilis Testing/Treatment</label>
+            <select class="form-select" name="syphilis_treatment">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Referral Made</label>
+            <select class="form-select" name="referral_initial">
+                <option value="">Select</option>
+                <option value="1">Health Facility</option>
+                <option value="2">Police</option>
+                <option value="3">Legal Aid</option>
+                <option value="4">Children's Department</option>
+                <option value="5">Shelter</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+
+        <!-- 2 Weeks Follow-up (completely optional) -->
+        <div class="col-12 mt-5"><h3>2 Weeks Follow-up</h3></div>
+        <div class="col-md-6">
+            <label class="form-label">Actual Return Date</label>
+            <input type="date" class="form-control" name="actual_return_2w">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Date of Next Appointment</label>
+            <input type="date" class="form-control" name="next_appointment_2w">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral To</label>
+            <select class="form-select" name="referral_2w">
+                <option value="">Select</option>
+                <option value="1">Health Facility</option>
+                <option value="2">Police</option>
+                <option value="3">Legal Aid</option>
+                <option value="4">Children's Department</option>
+                <option value="5">Shelter</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Trauma Counseling</label>
+            <select class="form-select" name="trauma_2w">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Adherence to PEP Counseling</label>
+            <select class="form-select" name="adherence_2w">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">PEP Refill</label>
+            <select class="form-select" name="pep_refill_2w">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">HIV Test Results</label>
+            <select class="form-select" name="hiv_2w">
+                <option value="">Select</option>
+                <option value="N">Negative</option>
+                <option value="P">Positive</option>
+                <option value="KP">Known Positive</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Pregnancy Diagnostic Test</label>
+            <select class="form-select" name="pregnancy_2w">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+                <option value="NA">Not Applicable</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hb (Hemoglobin Level)</label>
+            <input type="number" class="form-control" name="hb_2w" step="0.1">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ALT</label>
+            <input type="number" class="form-control" name="alt_2w">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hep B Vaccine (1st Dose)</label>
+            <select class="form-select" name="hep_b_1st_2w">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Tetanus (TT)</label>
+            <select class="form-select" name="tt_2w">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Syphilis Test Result</label>
+            <select class="form-select" name="syphilis_2w">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral Update</label>
+            <input type="text" class="form-control" name="referral_update_2w">
+        </div>
+
+        <!-- 1 Month Follow-up -->
+        <div class="col-12 mt-5"><h3>1 Month Follow-up</h3></div>
+        <div class="col-md-6">
+            <label class="form-label">Actual Return Date</label>
+            <input type="date" class="form-control" name="actual_return_1m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Date of Next Appointment</label>
+            <input type="date" class="form-control" name="next_appointment_1m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral To</label>
+            <select class="form-select" name="referral_1m">
+                <option value="">Select</option>
+                <option value="1">Health Facility</option>
+                <option value="2">Police</option>
+                <option value="3">Legal Aid</option>
+                <option value="4">Children's Department</option>
+                <option value="5">Shelter</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Trauma Counseling</label>
+            <select class="form-select" name="trauma_1m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Adherence to PEP Counseling</label>
+            <select class="form-select" name="adherence_1m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">PEP Refill</label>
+            <select class="form-select" name="pep_refill_1m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">PEP Completion</label>
+            <select class="form-select" name="pep_completion">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">HIV Test Results</label>
+            <select class="form-select" name="hiv_1m">
+                <option value="">Select</option>
+                <option value="N">Negative</option>
+                <option value="P">Positive</option>
+                <option value="KP">Known Positive</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Pregnancy Diagnostic Test</label>
+            <select class="form-select" name="pregnancy_1m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+                <option value="NA">Not Applicable</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hb (Hemoglobin Level)</label>
+            <input type="number" class="form-control" name="hb_1m" step="0.1">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ALT</label>
+            <input type="number" class="form-control" name="alt_1m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hep B Vaccine (2nd Dose)</label>
+            <select class="form-select" name="hep_b_2nd_1m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Tetanus (TT)</label>
+            <select class="form-select" name="tt_1m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Syphilis Test Result</label>
+            <select class="form-select" name="syphilis_1m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral Update</label>
+            <input type="text" class="form-control" name="referral_update_1m">
+        </div>
+
+        <!-- 3 Months Follow-up -->
+        <div class="col-12 mt-5"><h3>3 Months Follow-up</h3></div>
+        <div class="col-md-6">
+            <label class="form-label">Actual Return Date</label>
+            <input type="date" class="form-control" name="actual_return_3m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Date of Next Appointment</label>
+            <input type="date" class="form-control" name="next_appointment_3m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral To</label>
+            <select class="form-select" name="referral_3m">
+                <option value="">Select</option>
+                <option value="1">Health Facility</option>
+                <option value="2">Police</option>
+                <option value="3">Legal Aid</option>
+                <option value="4">Children's Department</option>
+                <option value="5">Shelter</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Trauma Counseling</label>
+            <select class="form-select" name="trauma_3m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Adherence to PEP Counseling</label>
+            <select class="form-select" name="adherence_3m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">HIV Test Results</label>
+            <select class="form-select" name="hiv_3m">
+                <option value="">Select</option>
+                <option value="N">Negative</option>
+                <option value="P">Positive</option>
+                <option value="KP">Known Positive</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hepatitis B Results</label>
+            <select class="form-select" name="hep_b_3m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Syphilis Results</label>
+            <select class="form-select" name="syphilis_3m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hb (Hemoglobin Level)</label>
+            <input type="number" class="form-control" name="hb_3m" step="0.1">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ALT</label>
+            <input type="number" class="form-control" name="alt_3m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hep B Vaccine (3rd Dose)</label>
+            <select class="form-select" name="hep_b_3rd_3m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Pregnancy Test</label>
+            <select class="form-select" name="pregnancy_3m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+                <option value="NA">Not Applicable</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral Update</label>
+            <input type="text" class="form-control" name="referral_update_3m">
+        </div>
+
+        <!-- 6 Months Follow-up -->
+        <div class="col-12 mt-5"><h3>6 Months Follow-up</h3></div>
+        <div class="col-md-6">
+            <label class="form-label">Actual Return Date</label>
+            <input type="date" class="form-control" name="actual_return_6m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Date of Next Appointment</label>
+            <input type="date" class="form-control" name="next_appointment_6m">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral To</label>
+            <select class="form-select" name="referral_6m">
+                <option value="">Select</option>
+                <option value="1">Health Facility</option>
+                <option value="2">Police</option>
+                <option value="3">Legal Aid</option>
+                <option value="4">Children's Department</option>
+                <option value="5">Shelter</option>
+                <option value="6">Other</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Trauma Counseling</label>
+            <select class="form-select" name="trauma_6m">
+                <option value="">Select</option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">HIV Test Results</label>
+            <select class="form-select" name="hiv_6m">
+                <option value="">Select</option>
+                <option value="N">Negative</option>
+                <option value="P">Positive</option>
+                <option value="KP">Known Positive</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Hepatitis B Results</label>
+            <select class="form-select" name="hep_b_6m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Syphilis Results</label>
+            <select class="form-select" name="syphilis_6m">
+                <option value="">Select</option>
+                <option value="P">Positive</option>
+                <option value="N">Negative</option>
+                <option value="ND">Not Done</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Referral Update</label>
+            <input type="text" class="form-control" name="referral_update_6m">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Client Outcome</label>
+            <input type="text" class="form-control" name="client_outcome">
+        </div>
+
+        <div class="col-12 mt-4">
+            <label class="form-label">Facility Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="facility_name" value="Kayunga Hospital" required>
+            <div class="invalid-feedback">Required</div>
+        </div>
+
+        <div class="col-12 mt-5">
+            <button type="submit" class="btn btn-primary btn-lg">Submit Record</button>
+            <small class="text-muted ms-3">* = required field. You can leave other fields blank and still submit.</small>
+        </div>
+    </form>
+</div>
 {% endblock %}

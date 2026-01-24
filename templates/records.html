@@ -138,6 +138,10 @@
                     <td>{{ record.client_outcome or '' }}</td>
                     <td>{{ record.created_at }}</td>
                 </tr>
+                <!-- In records.html tbody -->
+<td>
+    <a href="/edit/{{ record.id }}" class="btn btn-sm btn-primary">Edit</a>
+</td>
                 {% endfor %}
                 {% endif %}
             </tbody>

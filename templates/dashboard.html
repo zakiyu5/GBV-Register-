@@ -1,110 +1,123 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 text-center">GBV Dashboard</h2>
 
-    <!-- Date Filter -->
-    <div class="card mb-4">
+<div class="container my-4 my-md-5">
+    <h2 class="text-center mb-4 fw-bold" style="color: var(--primary);">GBV Dashboard</h2>
+
+    <!-- Date Range Filter -->
+    <div class="card shadow-sm mb-4 border-0">
         <div class="card-body">
-            <form class="row g-3">
-                <div class="col-md-4">
+            <form class="row g-3 justify-content-center">
+                <div class="col-12 col-sm-5 col-md-4">
                     <label class="form-label">Start Date</label>
                     <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-sm-5 col-md-4">
                     <label class="form-label">End Date</label>
                     <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Update</button>
+                <div class="col-12 col-sm-auto d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 w-sm-auto">
+                        <i class="fas fa-sync-alt me-2"></i> Update
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card text-center bg-primary text-white">
+    <!-- KPI Cards – responsive grid -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4 mb-5">
+        <div class="col">
+            <div class="card text-center border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h3>{{ total_cases }}</h3>
-                    <p>Total Cases</p>
+                    <h3 class="fw-bold text-primary">{{ total_cases }}</h3>
+                    <p class="text-muted mb-0">Total Cases</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-center bg-info text-white">
+        <div class="col">
+            <div class="card text-center border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h3>{{ female_pct }}%</h3>
-                    <p>Female Survivors</p>
+                    <h3 class="fw-bold text-info">{{ female_pct }}%</h3>
+                    <p class="text-muted mb-0">Female Survivors</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-center bg-warning text-white">
+        <div class="col">
+            <div class="card text-center border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h3>{{ minors_pct }}%</h3>
-                    <p>Children (&lt;18)</p>
+                    <h3 class="fw-bold text-warning">{{ minors_pct }}%</h3>
+                    <p class="text-muted mb-0">Children (&lt;18)</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center bg-success text-white">
+        <div class="col">
+            <div class="card text-center border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h3>{{ pep_pct }}%</h3>
-                    <p>Received PEP</p>
+                    <h3 class="fw-bold text-success">{{ pep_pct }}%</h3>
+                    <p class="text-muted mb-0">Received PEP</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center bg-secondary text-white">
+        <div class="col">
+            <div class="card text-center border-0 shadow-sm h-100">
                 <div class="card-body">
-                    <h3>{{ referred_pct }}%</h3>
-                    <p>Referred for Support</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">Cases Over Time</div>
-                <div class="card-body">
-                    <canvas id="timeChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">Type of Violence</div>
-                <div class="card-body">
-                    <canvas id="violenceChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-12 mb-4">
-            <div class="card">
-                <div class="card-header">Age Distribution</div>
-                <div class="card-body">
-                    <canvas id="ageChart"></canvas>
+                    <h3 class="fw-bold text-secondary">{{ referred_pct }}%</h3>
+                    <p class="text-muted mb-0">Referred for Support</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="text-center">
-        <a href="/" class="btn btn-outline-primary">Data Entry</a>
-        <a href="/records" class="btn btn-outline-secondary ms-2">All Records</a>
-        <a href="/reports" class="btn btn-outline-info ms-2">Reports</a>
+    <!-- Charts – responsive layout -->
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light fw-bold">Cases Over Time</div>
+                <div class="card-body">
+                    <canvas id="timeChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light fw-bold">Type of Violence</div>
+                <div class="card-body">
+                    <canvas id="violenceChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light fw-bold">Age Distribution</div>
+                <div class="card-body">
+                    <canvas id="ageChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="text-center mt-5">
+        <a href="/data_entry" class="btn btn-success btn-lg px-4 me-2 mb-2 mb-md-0">
+            <i class="fas fa-plus me-2"></i> New Entry
+        </a>
+        <a href="/records" class="btn btn-outline-primary btn-lg px-4 me-2 mb-2 mb-md-0">
+            <i class="fas fa-list me-2"></i> All Records
+        </a>
+        <a href="/reports" class="btn btn-outline-info btn-lg px-4">
+            <i class="fas fa-chart-bar me-2"></i> Reports
+        </a>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js Scripts (keep your existing ones) -->
 <script>
     const chartData = {{ chart_data | safe }};
 
+    // Time Chart (Line)
     new Chart(document.getElementById('timeChart'), {
         type: 'line',
         data: {
@@ -112,26 +125,41 @@
             datasets: [{
                 label: 'GBV Cases',
                 data: chartData.time.values,
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                tension: 0.3
+                borderColor: 'var(--primary)',
+                backgroundColor: 'rgba(0, 105, 92, 0.15)',
+                tension: 0.3,
+                fill: true
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
     });
 
+    // Violence Chart (Pie)
     new Chart(document.getElementById('violenceChart'), {
         type: 'pie',
         data: {
             labels: chartData.violence.labels,
             datasets: [{
                 data: chartData.violence.values,
-                backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff']
+                backgroundColor: [
+                    '#ff6384', '#36a2eb', '#ffce56',
+                    '#4bc0c0', '#9966ff', '#ff9f40'
+                ]
             }]
         },
-        options: { responsive: true }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
     });
 
+    // Age Chart (Bar)
     new Chart(document.getElementById('ageChart'), {
         type: 'bar',
         data: {
@@ -139,10 +167,17 @@
             datasets: [{
                 label: 'Cases',
                 data: chartData.age.values,
-                backgroundColor: '#198754'
+                backgroundColor: 'rgba(0, 105, 92, 0.7)',
+                borderColor: 'var(--primary)',
+                borderWidth: 1
             }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
     });
 </script>
+
 {% endblock %}

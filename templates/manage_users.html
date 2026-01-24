@@ -1,0 +1,48 @@
+<!-- templates/manage_users.html -->
+{% extends "base.html" %}
+{% block content %}
+<h2>Manage Nurse Accounts</h2>
+<form method="POST" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="username" placeholder="Username" required>
+        </div>
+        <div class="col-md-3">
+            <input type="password" class="form-control" name="password" placeholder="Password" required>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="role" required>
+                <option value="nurse">Nurse</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-success w-100">Create User</button>
+        </div>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+                <form method="POST" action="/admin/users/delete/{{ user.id }}" style="display:inline;">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
