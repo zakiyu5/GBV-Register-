@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Patient - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-edit me-2"></i>Edit Patient Information
+{% endblock %}
+
+{% block page_subtitle %}
+Update details for {{ patient.client_name }} (OPD: {{ patient.patient_id }})
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+   class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i> Back to Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <form method="POST">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-user-edit me-2"></i>Patient Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- OPD Number Display (Read-only) -->
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">Patient Identification</h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">OPD Number</label>
+                        <input type="text" class="form-control bg-light" 
+                               value="{{ patient.patient_id }}" readonly>
+                        <small class="form-text text-muted">OPD number cannot be changed</small>
+                    </div>
+                    
+                    <!-- REMOVED: Serial Number field -->
+
+                    <!-- Basic Information -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Arrival Date & Time <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" name="arrival_datetime" 
+                               value="{{ patient.arrival_datetime|format_datetime_for_input }}" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">National ID Number</label>
+                        <input type="text" class="form-control" name="national_id" 
+                               value="{{ patient.national_id or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Client Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="client_name" 
+                               value="{{ patient.client_name }}" required>
+                    </div>
+
+                    <!-- Demographic Information -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2 mb-3">Demographic Information</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Age <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="age" 
+                               value="{{ patient.age }}" min="0" max="120" required>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Sex <span class="text-danger">*</span></label>
+                        <select class="form-select" name="sex" required>
+                            <option value="">Select sex</option>
+                            <option value="F" {% if patient.sex == 'F' %}selected{% endif %}>Female</option>
+                            <option value="M" {% if patient.sex == 'M' %}selected{% endif %}>Male</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Marital Status</label>
+                        <select class="form-select" name="marital_status">
+                            <option value="">Select status</option>
+                            <option value="Single" {% if patient.marital_status == 'Single' %}selected{% endif %}>Single</option>
+                            <option value="Married" {% if patient.marital_status == 'Married' %}selected{% endif %}>Married</option>
+                            <option value="Divorced" {% if patient.marital_status == 'Divorced' %}selected{% endif %}>Divorced</option>
+                            <option value="Separated" {% if patient.marital_status == 'Separated' %}selected{% endif %}>Separated</option>
+                            <option value="Widowed" {% if patient.marital_status == 'Widowed' %}selected{% endif %}>Widowed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Number</label>
+                        <input type="tel" class="form-control" name="contact_no" 
+                               value="{{ patient.contact_no or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-control" name="address" 
+                               value="{{ patient.address or '' }}">
+                    </div>
+
+                    <!-- Incident Details -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2 mb-3">Incident Details</h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Incident Date & Time</label>
+                        <input type="datetime-local" class="form-control" name="incident_datetime" 
+                               value="{{ patient.incident_datetime|format_datetime_for_input if patient.incident_datetime else '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Type of Violence <span class="text-danger">*</span></label>
+                        <select class="form-select" name="type_violence" required>
+                            <option value="">Select type</option>
+                            <option value="Physical" {% if patient.type_violence == 'Physical' %}selected{% endif %}>Physical Violence</option>
+                            <option value="Sexual" {% if patient.type_violence == 'Sexual' %}selected{% endif %}>Sexual Violence</option>
+                            <option value="Emotional" {% if patient.type_violence == 'Emotional' %}selected{% endif %}>Emotional/Psychological</option>
+                            <option value="Economic" {% if patient.type_violence == 'Economic' %}selected{% endif %}>Economic Violence</option>
+                            <option value="Other" {% if patient.type_violence == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Perpetrator Relationship</label>
+                        <select class="form-select" name="perpetrator_relation">
+                            <option value="">Select relationship</option>
+                            <option value="Spouse/Partner" {% if patient.perpetrator_relation == 'Spouse/Partner' %}selected{% endif %}>Spouse/Partner</option>
+                            <option value="Family Member" {% if patient.perpetrator_relation == 'Family Member' %}selected{% endif %}>Family Member</option>
+                            <option value="Acquaintance" {% if patient.perpetrator_relation == 'Acquaintance' %}selected{% endif %}>Acquaintance</option>
+                            <option value="Stranger" {% if patient.perpetrator_relation == 'Stranger' %}selected{% endif %}>Stranger</option>
+                            <option value="Authority Figure" {% if patient.perpetrator_relation == 'Authority Figure' %}selected{% endif %}>Authority Figure</option>
+                            <option value="Other" {% if patient.perpetrator_relation == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Type of Case</label>
+                        <select class="form-select" name="type_case">
+                            <option value="">Select case type</option>
+                            <option value="New" {% if patient.type_case == 'New' %}selected{% endif %}>New Case</option>
+                            <option value="Repeat" {% if patient.type_case == 'Repeat' %}selected{% endif %}>Repeat Case</option>
+                            <option value="Referred" {% if patient.type_case == 'Referred' %}selected{% endif %}>Referred Case</option>
+                        </select>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2 mb-3">Additional Information</h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Police Report (P3 Form)</label>
+                        <select class="form-select" name="p3_form">
+                            <option value="">Select status</option>
+                            <option value="Yes" {% if patient.p3_form == 'Yes' %}selected{% endif %}>Yes - Completed</option>
+                            <option value="No" {% if patient.p3_form == 'No' %}selected{% endif %}>No - Not Completed</option>
+                            <option value="Pending" {% if patient.p3_form == 'Pending' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Client Category (OVC)</label>
+                        <select class="form-select" name="ovc">
+                            <option value="">Select category</option>
+                            <option value="Yes" {% if patient.ovc == 'Yes' %}selected{% endif %}>Yes - Orphan/Vulnerable Child</option>
+                            <option value="No" {% if patient.ovc == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Next of Kin Name</label>
+                        <input type="text" class="form-control" name="next_of_kin" 
+                               value="{{ patient.next_of_kin or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Next of Kin Contact</label>
+                        <input type="text" class="form-control" name="next_of_kin_contact" 
+                               value="{{ patient.next_of_kin_contact or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Disability Status</label>
+                        <select class="form-select" name="disability">
+                            <option value="">Select status</option>
+                            <option value="None" {% if patient.disability == 'None' %}selected{% endif %}>No Disability</option>
+                            <option value="Physical" {% if patient.disability == 'Physical' %}selected{% endif %}>Physical Disability</option>
+                            <option value="Visual" {% if patient.disability == 'Visual' %}selected{% endif %}>Visual Impairment</option>
+                            <option value="Hearing" {% if patient.disability == 'Hearing' %}selected{% endif %}>Hearing Impairment</option>
+                            <option value="Intellectual" {% if patient.disability == 'Intellectual' %}selected{% endif %}>Intellectual Disability</option>
+                            <option value="Other" {% if patient.disability == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Medical Form Filled</label>
+                        <input type="date" class="form-control" name="medical_form_filled" 
+                               value="{{ patient.medical_form_filled or '' }}">
+                    </div>
+
+                    <!-- Facility Information -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2 mb-3">Facility Information</h6>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <label class="form-label">Facility Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="facility_name" 
+                               value="{{ patient.facility_name or 'Kayunga Regional Referral Hospital' }}" 
+                               required>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-12 mt-4">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success px-5">
+                                <i class="fas fa-save me-2"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus first editable field
+    const firstEditable = document.querySelector('input:not([readonly]):not([type="hidden"]), select, textarea');
+    if (firstEditable) {
+        firstEditable.focus();
+    }
+});
+</script>
+{% endblock %}

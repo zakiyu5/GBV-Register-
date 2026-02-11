@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+
+{% block title %}Add Follow-up - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-calendar-plus me-2"></i>Add Follow-up Visit
+{% endblock %}
+
+{% block page_subtitle %}
+For Patient: {{ patient.client_name }} (ID: {{ patient.patient_id }})
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+   class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i> Back to Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Patient Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="user-avatar mx-auto mb-2 bg-primary text-white">
+                            <i class="fas fa-user-injured"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0">{{ patient.client_name }}</h6>
+                        <small class="text-muted">{{ patient.patient_id }}</small>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Age/Sex</small>
+                            <span class="fw-bold">{{ patient.age }} / {{ patient.sex }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Arrival Date</small>
+                            <span class="fw-bold">{{ patient.arrival_datetime[:10] }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Violence Type</small>
+                            <span class="fw-bold">{{ patient.type_violence }}</span>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <small class="text-muted d-block">Contact</small>
+                            <span class="fw-bold">{{ patient.contact_no or 'N/A' }}</span>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <small class="text-muted d-block">Serial No</small>
+                            <span class="fw-bold">{{ patient.serial_no }}</span>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <small class="text-muted d-block">Status</small>
+                            <span class="badge bg-primary">Active</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-up Progress -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>Follow-up Progress</h6>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                {% for type in ['2weeks', '1month', '3months', '6months'] %}
+                <div class="col-3">
+                    <div class="position-relative mb-3">
+                        {% if type in existing_types %}
+                        <div class="completed-step">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Completed</small>
+                        {% elif type == available_types[0] %}
+                        <div class="current-step">
+                            <i class="fas fa-calendar-check fa-2x text-primary"></i>
+                        </div>
+                        <small class="text-primary fw-bold mt-2 d-block">Current</small>
+                        {% else %}
+                        <div class="pending-step">
+                            <i class="far fa-circle fa-2x text-muted"></i>
+                        </div>
+                        <small class="text-muted mt-2 d-block">Pending</small>
+                        {% endif %}
+                    </div>
+                    <div class="fw-bold">
+                        {{ type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if available_types %}
+    <!-- Follow-up Form -->
+    <form method="POST" id="followupForm">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="mb-4" style="color: var(--primary-color);">
+                    <i class="fas fa-clipboard-check me-2"></i>Follow-up Details
+                </h5>
+                
+                <!-- Follow-up Type -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-up Type <span class="text-danger">*</span></label>
+                        <select class="form-select" name="followup_type" required>
+                            <option value="">Select follow-up type</option>
+                            {% for type in available_types %}
+                            <option value="{{ type }}" {% if loop.first %}selected{% endif %}>
+                                {{ type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-up Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="followup_date" 
+                               value="{{ suggested_date }}" required>
+                    </div>
+                </div>
+
+                <!-- Visit Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-calendar-day me-2"></i>Visit Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Actual Return Date</label>
+                        <input type="date" class="form-control" name="actual_return_date" 
+                               value="{{ today }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Next Appointment Date</label>
+                        <input type="date" class="form-control" name="next_appointment">
+                    </div>
+                </div>
+
+                <!-- Medical Tests -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-vial me-2"></i>Medical Tests & Results
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">HIV Test Result</label>
+                        <select class="form-select" name="hiv_test">
+                            <option value="">Select result</option>
+                            <option value="Negative">Negative</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Known Positive">Known Positive</option>
+                            <option value="Not Done">Not Done</option>
+                            <option value="Refused">Refused</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pregnancy Test</label>
+                        <select class="form-select" name="pregnancy_test">
+                            <option value="">Select result</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="Not Done">Not Done</option>
+                            <option value="Not Applicable">Not Applicable</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Syphilis Test</label>
+                        <select class="form-select" name="syphilis_test">
+                            <option value="">Select result</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="Not Done">Not Done</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mt-3">
+                        <label class="form-label">Hb Level (g/dL)</label>
+                        <input type="number" step="0.1" class="form-control" name="hb_level" 
+                               placeholder="e.g., 12.5">
+                    </div>
+                    <div class="col-md-4 mt-3">
+                        <label class="form-label">ALT Level (U/L)</label>
+                        <input type="number" class="form-control" name="alt_level" 
+                               placeholder="e.g., 25">
+                    </div>
+                </div>
+
+                <!-- PEP & Treatment -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-pills me-2"></i>PEP & Treatment
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">PEP Refill</label>
+                        <select class="form-select" name="pep_refill">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Not Applicable">Not Applicable</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">PEP Completion</label>
+                        <select class="form-select" name="pep_completion">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes - Completed</option>
+                            <option value="No">No - Ongoing</option>
+                            <option value="Stopped">Stopped</option>
+                            <option value="Not Applicable">Not Applicable</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Hep B Vaccine</label>
+                        <select class="form-select" name="hep_b_vaccine">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes - Given</option>
+                            <option value="No">No</option>
+                            <option value="Completed">Completed Series</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mt-3">
+                        <label class="form-label">Tetanus Toxoid (TT)</label>
+                        <select class="form-select" name="tt_given">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Counseling & Support -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-hands-helping me-2"></i>Counseling & Support
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Trauma Counseling</label>
+                        <select class="form-select" name="trauma_counseling">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes - Provided</option>
+                            <option value="No">No</option>
+                            <option value="Referred">Referred</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Adherence Counseling</label>
+                        <select class="form-select" name="adherence_counseling">
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                            <option value="Good">Good Adherence</option>
+                            <option value="Poor">Poor Adherence</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Referral Update</label>
+                        <select class="form-select" name="referral">
+                            <option value="">Select</option>
+                            <option value="None">No Referral</option>
+                            <option value="Police">Police Update</option>
+                            <option value="Legal">Legal Aid Update</option>
+                            <option value="Shelter">Shelter Update</option>
+                            <option value="Other">Other Service</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <label class="form-label">Referral Details</label>
+                        <input type="text" class="form-control" name="referral_update" 
+                               placeholder="Details about referral update...">
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="notes" rows="4" 
+                                  placeholder="Any additional observations, recommendations, or follow-up actions..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success px-5">
+                                <i class="fas fa-save me-2"></i> Save Follow-up
+                            </button>
+                        </div>
+                        <p class="text-muted mt-3 mb-0 text-center">
+                            <i class="fas fa-info-circle me-1"></i>
+                            All fields are optional except follow-up type and date. You can submit with minimal information.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% else %}
+    <!-- All Follow-ups Completed -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-trophy fa-4x text-success mb-3"></i>
+                <h4 class="text-success">All Follow-ups Completed!</h4>
+                <p class="text-muted">
+                    This patient has completed all scheduled follow-up visits.
+                </p>
+            </div>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('add_outcome', patient_id=patient.patient_id) }}" 
+                   class="btn btn-warning px-4">
+                    <i class="fas fa-flag me-2"></i> Record Final Outcome
+                </a>
+                <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                   class="btn btn-outline-primary px-4">
+                    <i class="fas fa-user me-2"></i> Back to Patient
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate next appointment date automatically
+    const followupDateInput = document.querySelector('input[name="followup_date"]');
+    const nextAppointmentInput = document.querySelector('input[name="next_appointment"]');
+    
+    if (followupDateInput && nextAppointmentInput) {
+        followupDateInput.addEventListener('change', function() {
+            if (this.value) {
+                const followupDate = new Date(this.value);
+                const nextAppointment = new Date(followupDate);
+                
+                // Set next appointment based on follow-up type
+                const followupType = document.querySelector('select[name="followup_type"]').value;
+                
+                if (followupType === '2weeks') {
+                    nextAppointment.setDate(nextAppointment.getDate() + 14); // 2 weeks
+                } else if (followupType === '1month') {
+                    nextAppointment.setMonth(nextAppointment.getMonth() + 1); // 1 month
+                } else if (followupType === '3months') {
+                    nextAppointment.setMonth(nextAppointment.getMonth() + 3); // 3 months
+                } else if (followupType === '6months') {
+                    nextAppointment.setMonth(nextAppointment.getMonth() + 6); // 6 months
+                }
+                
+                // Format date for input (YYYY-MM-DD)
+                const formattedDate = nextAppointment.toISOString().split('T')[0];
+                nextAppointmentInput.value = formattedDate;
+            }
+        });
+    }
+    
+    // Auto-suggest actual return date as today
+    const actualReturnInput = document.querySelector('input[name="actual_return_date"]');
+    if (actualReturnInput && !actualReturnInput.value) {
+        actualReturnInput.value = '{{ today }}';
+    }
+    
+    // Form validation
+    const form = document.getElementById('followupForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const followupType = document.querySelector('select[name="followup_type"]').value;
+            const followupDate = document.querySelector('input[name="followup_date"]').value;
+            
+            if (!followupType || !followupDate) {
+                e.preventDefault();
+                alert('Please select follow-up type and date');
+                return false;
+            }
+            
+            return true;
+        });
+    }
+});
+
+// Helper to format dates
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString('en-US', options);
+}
+</script>
+
+<style>
+.completed-step, .current-step, .pending-step {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+}
+
+.current-step {
+    background: rgba(26, 82, 118, 0.1);
+    border: 3px solid var(--primary-color);
+}
+
+.completed-step {
+    background: rgba(39, 174, 96, 0.1);
+    border: 3px solid #27ae60;
+}
+
+.pending-step {
+    background: rgba(108, 117, 125, 0.1);
+    border: 3px solid #6c757d;
+}
+
+.form-control, .form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px 15px;
+    transition: all 0.3s;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(26, 82, 118, 0.15);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    border: none;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(39, 174, 96, 0.3);
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+</style>
+{% endblock %}

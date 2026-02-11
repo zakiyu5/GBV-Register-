@@ -5,3 +5,5 @@ gunicorn==23.0.0
 flask-login==0.6.3
 flask-wtf==1.2.1
 werkzeug==3.0.3
+python-dateutil==2.9.0
+

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}All Records - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-list me-2"></i>All Patient Records
+{% endblock %}
+
+{% block page_subtitle %}
+Total: {{ total_count }} records | Female: {{ female_count }} | Children: {{ child_count }} | PEP: {{ pep_count }}
+{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-outline-primary" onclick="window.print()">
+    <i class="fas fa-print me-2"></i> Print
+</button>
+<a href="{{ url_for('export_csv') }}" class="btn btn-success">
+    <i class="fas fa-download me-2"></i> Export CSV
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" 
+                       placeholder="Name, ID, Serial...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sex</label>
+                <select class="form-select" name="sex">
+                    <option value="">All</option>
+                    <option value="F" {% if sex == 'F' %}selected{% endif %}>Female</option>
+                    <option value="M" {% if sex == 'M' %}selected{% endif %}>Male</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Violence</label>
+                <select class="form-select" name="violence">
+                    <option value="">All</option>
+                    <option value="Physical" {% if violence == 'Physical' %}selected{% endif %}>Physical</option>
+                    <option value="Sexual" {% if violence == 'Sexual' %}selected{% endif %}>Sexual</option>
+                    <option value="Emotional" {% if violence == 'Emotional' %}selected{% endif %}>Emotional</option>
+                    <option value="Economic" {% if violence == 'Economic' %}selected{% endif %}>Economic</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Age Group</label>
+                <select class="form-select" name="age_group">
+                    <option value="">All</option>
+                    <option value="child" {% if age_group == 'child' %}selected{% endif %}>Child (&lt;18)</option>
+                    <option value="adult" {% if age_group == 'adult' %}selected{% endif %}>Adult</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date Range</label>
+                <div class="input-group">
+                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                    <span class="input-group-text">to</span>
+                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="show_completed" 
+                           value="true" id="showCompleted" {% if show_completed %}checked{% endif %}>
+                    <label class="form-check-label" for="showCompleted">
+                        Show completed cases
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary float-end">
+                    <i class="fas fa-filter me-2"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Records Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Age/Sex</th>
+                        <th>Contact</th>
+                        <th>Violence Type</th>
+                        <th>Arrival Date</th>
+                        <th>PEP</th>
+                        <th>Follow-ups</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('patient_lookup', search_term=record.patient_id, search_by='patient_id') }}"
+                               class="text-decoration-none">
+                                {{ record.patient_id }}
+                            </a>
+                        </td>
+                        <td>{{ record.client_name }}</td>
+                        <td>{{ record.age }} / {{ record.sex }}</td>
+                        <td>{{ record.contact_no or 'N/A' }}</td>
+                        <td>
+                            <span class="badge bg-warning">{{ record.type_violence or 'N/A' }}</span>
+                        </td>
+                        <td>{{ record.arrival_datetime[:10] if record.arrival_datetime else 'N/A' }}</td>
+                        <td>
+                            {% if record.pep_given == 'Yes' %}
+                            <span class="badge bg-success">Yes</span>
+                            {% else %}
+                            <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ record.followup_count or 0 }}/4</span>
+                        </td>
+                        <td>
+                            {% if record.outcome %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif record.followup_count and record.followup_count >= 4 %}
+                            <span class="badge bg-info">All Done</span>
+                            {% else %}
+                            <span class="badge bg-primary">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('patient_lookup', search_term=record.patient_id, search_by='patient_id') }}"
+                                   class="btn btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_patient', patient_id=record.patient_id) }}"
+                                   class="btn btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-inbox fa-2x mb-3"></i>
+                                <p class="mb-0">No records found matching your filters</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if records|length > 0 %}
+<div class="mt-4">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item disabled">
+                <a class="page-link" href="#">Previous</a>
+            </li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}

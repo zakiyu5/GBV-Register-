@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Register New Patient - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-user-plus me-2"></i>Register New Patient
+{% endblock %}
+
+{% block page_subtitle %}
+Fill in essential patient information. All fields with <span class="text-danger">*</span> are required.
+{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-outline-primary" onclick="window.print()">
+    <i class="fas fa-print me-1"></i> Print Form
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <form method="POST" id="patientForm" class="needs-validation" novalidate>
+        <!-- Section 1: Patient Identification -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3 border-bottom pb-2" style="color: var(--primary-color);">
+                    <i class="fas fa-id-card me-2"></i>Patient Identification
+                </h4>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <!-- OPD Number Field - SIMPLIFIED -->
+            <div class="col-md-6">
+                <label class="form-label">OPD Number <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="patient_id" required 
+                       placeholder="e.g., 20202, 23022, any number format">
+                <div class="invalid-feedback">Please enter OPD number.</div>
+                <small class="form-text text-muted">Hospital OPD number (can be any number format)</small>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Arrival Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" class="form-control" name="arrival_datetime" 
+                       value="{{ arrival_datetime }}" required>
+                <div class="invalid-feedback">Please select arrival date and time.</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">National ID Number (Optional)</label>
+                <input type="text" class="form-control" name="national_id" 
+                       placeholder="Enter national ID if available">
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Client Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="client_name" required 
+                       placeholder="Full name of client">
+                <div class="invalid-feedback">Please enter client name.</div>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Age <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" name="age" min="0" max="120" required 
+                       placeholder="Age in years">
+                <div class="invalid-feedback">Please enter valid age.</div>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Sex <span class="text-danger">*</span></label>
+                <select class="form-select" name="sex" required>
+                    <option value="">Select sex</option>
+                    <option value="F">Female</option>
+                    <option value="M">Male</option>
+                </select>
+                <div class="invalid-feedback">Please select sex.</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Marital Status</label>
+                <select class="form-select" name="marital_status">
+                    <option value="">Select status</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Separated">Separated</option>
+                    <option value="Widowed">Widowed</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Contact Number</label>
+                <input type="tel" class="form-control" name="contact_no" 
+                       placeholder="Phone number">
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-control" name="address" 
+                       placeholder="Residential address">
+            </div>
+        </div>
+
+        <!-- Section 2: Incident Details -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3 border-bottom pb-2" style="color: var(--primary-color);">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Incident Details
+                </h4>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Incident Date & Time</label>
+                <input type="datetime-local" class="form-control" name="incident_datetime">
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Type of Violence <span class="text-danger">*</span></label>
+                <select class="form-select" name="type_violence" required>
+                    <option value="">Select type</option>
+                    <option value="Physical">Physical Violence</option>
+                    <option value="Sexual">Sexual Violence</option>
+                    <option value="Emotional">Emotional/Psychological</option>
+                    <option value="Economic">Economic Violence</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div class="invalid-feedback">Please select violence type.</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Perpetrator Relationship</label>
+                <select class="form-select" name="perpetrator_relation">
+                    <option value="">Select relationship</option>
+                    <option value="Spouse/Partner">Spouse/Partner</option>
+                    <option value="Family Member">Family Member</option>
+                    <option value="Acquaintance">Acquaintance</option>
+                    <option value="Stranger">Stranger</option>
+                    <option value="Authority Figure">Authority Figure</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Type of Case</label>
+                <select class="form-select" name="type_case">
+                    <option value="">Select case type</option>
+                    <option value="New">New Case</option>
+                    <option value="Repeat">Repeat Case</option>
+                    <option value="Referred">Referred Case</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Police Report (P3 Form)</label>
+                <select class="form-select" name="p3_form">
+                    <option value="">Select status</option>
+                    <option value="Yes">Yes - Completed</option>
+                    <option value="No">No - Not Completed</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Client Category (OVC)</label>
+                <select class="form-select" name="ovc">
+                    <option value="">Select category</option>
+                    <option value="Yes">Yes - Orphan/Vulnerable Child</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Next of Kin Name</label>
+                <input type="text" class="form-control" name="next_of_kin" 
+                       placeholder="Next of kin full name">
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Next of Kin Contact</label>
+                <input type="text" class="form-control" name="next_of_kin_contact" 
+                       placeholder="Phone number">
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Disability Status</label>
+                <select class="form-select" name="disability">
+                    <option value="">Select status</option>
+                    <option value="None">No Disability</option>
+                    <option value="Physical">Physical Disability</option>
+                    <option value="Visual">Visual Impairment</option>
+                    <option value="Hearing">Hearing Impairment</option>
+                    <option value="Intellectual">Intellectual Disability</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Medical Form Filled</label>
+                <input type="date" class="form-control" name="medical_form_filled">
+            </div>
+        </div>
+
+        <!-- Section 3: Initial Medical Information -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3 border-bottom pb-2" style="color: var(--primary-color);">
+                    <i class="fas fa-stethoscope me-2"></i>Initial Medical Information (Optional)
+                </h4>
+                <p class="text-muted">This section can be completed now or during the first follow-up visit.</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Initial HIV Test</label>
+                <select class="form-select" name="hiv_test_initial">
+                    <option value="">Select result</option>
+                    <option value="Negative">Negative</option>
+                    <option value="Positive">Positive</option>
+                    <option value="Known Positive">Known Positive</option>
+                    <option value="Not Done">Not Done</option>
+                    <option value="Refused">Refused</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Pregnancy Test</label>
+                <select class="form-select" name="pregnancy_test">
+                    <option value="">Select result</option>
+                    <option value="Positive">Positive</option>
+                    <option value="Negative">Negative</option>
+                    <option value="Not Done">Not Done</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">PEP Given (Within 72hrs)</label>
+                <select class="form-select" name="pep_given">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Emergency Contraceptive</label>
+                <select class="form-select" name="ecp_given">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Not Applicable">Not Applicable</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Trauma Counseling</label>
+                <select class="form-select" name="trauma_counseling_initial">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes - Provided</option>
+                    <option value="No">No</option>
+                    <option value="Referred">Referred</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Referral Made</label>
+                <select class="form-select" name="referral_initial">
+                    <option value="">Select</option>
+                    <option value="Police">Police</option>
+                    <option value="Legal Aid">Legal Aid</option>
+                    <option value="Psychosocial">Psychosocial Support</option>
+                    <option value="Shelter">Shelter</option>
+                    <option value="Other Health Facility">Other Health Facility</option>
+                    <option value="None">No Referral</option>
+                </select>
+            </div>
+            
+            <div class="col-md-12">
+                <label class="form-label">Referral Facility (If referred)</label>
+                <input type="text" class="form-control" name="referral_facility" 
+                       placeholder="Name of referral facility">
+            </div>
+            
+            <div class="col-md-12">
+                <label class="form-label">Initial Notes</label>
+                <textarea class="form-control" name="initial_notes" rows="3" 
+                          placeholder="Any additional notes about initial visit..."></textarea>
+            </div>
+        </div>
+
+        <!-- Facility Information -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h4 class="mb-3 border-bottom pb-2" style="color: var(--primary-color);">
+                    <i class="fas fa-hospital me-2"></i>Facility Information
+                </h4>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Facility Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="facility_name" 
+                       value="Kayunga Regional Referral Hospital" required readonly>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success px-5">
+                        <i class="fas fa-save me-2"></i>Register Patient
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    
+    var forms = document.querySelectorAll('.needs-validation');
+    
+    Array.prototype.slice.call(forms)
+        .forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+})();
+
+// Auto-calculate next appointment date
+document.querySelector('input[name="arrival_datetime"]').addEventListener('change', function() {
+    const arrivalDate = new Date(this.value);
+    if (!isNaN(arrivalDate.getTime())) {
+        const nextAppointment = new Date(arrivalDate);
+        nextAppointment.setDate(nextAppointment.getDate() + 14);
+        
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        console.log('Recommended next appointment: ' + nextAppointment.toLocaleDateString('en-US', options));
+    }
+});
+
+// Show/hide additional fields based on selections
+document.addEventListener('DOMContentLoaded', function() {
+    const referralSelect = document.querySelector('select[name="referral_initial"]');
+    const referralFacility = document.querySelector('input[name="referral_facility"]');
+    
+    if (referralSelect && referralFacility) {
+        referralSelect.addEventListener('change', function() {
+            if (this.value && this.value !== 'None') {
+                referralFacility.parentElement.style.display = 'block';
+            } else {
+                referralFacility.parentElement.style.display = 'none';
+            }
+        });
+        
+        referralSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Auto-focus OPD number field
+    const opdInput = document.querySelector('input[name="patient_id"]');
+    if (opdInput) {
+        opdInput.focus();
+    }
+});
+</script>
+{% endblock %}

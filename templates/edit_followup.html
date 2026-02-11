@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Follow-up - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-edit me-2"></i>Edit Follow-up Visit
+{% endblock %}
+
+{% block page_subtitle %}
+For Patient: {{ patient.client_name }} (ID: {{ patient.patient_id }})
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+   class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i> Back to Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Follow-up Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar bg-primary text-white me-3">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1">{{ patient.client_name }}</h5>
+                            <p class="text-muted mb-0">
+                                {{ followup.followup_type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }} Follow-up
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Follow-up Date</small>
+                            <span class="fw-bold">{{ followup.followup_date or 'Not set' }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Actual Return</small>
+                            <span class="fw-bold">{{ followup.actual_return_date or 'Not returned' }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Recorded By</small>
+                            <span class="fw-bold">{{ followup.staff_name or 'Unknown' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <form method="POST">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    {{ followup.followup_type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }} Follow-up Details
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Dates -->
+                    <div class="col-md-6">
+                        <label class="form-label">Follow-up Date</label>
+                        <input type="date" class="form-control" name="followup_date" 
+                               value="{{ followup.followup_date or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Actual Return Date</label>
+                        <input type="date" class="form-control" name="actual_return_date" 
+                               value="{{ followup.actual_return_date or '' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Next Appointment Date</label>
+                        <input type="date" class="form-control" name="next_appointment" 
+                               value="{{ followup.next_appointment or '' }}">
+                    </div>
+
+                    <!-- Medical Tests -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">Medical Tests & Results</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">HIV Test Result</label>
+                        <select class="form-select" name="hiv_test">
+                            <option value="">Select result</option>
+                            <option value="Negative" {% if followup.hiv_test == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Positive" {% if followup.hiv_test == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Known Positive" {% if followup.hiv_test == 'Known Positive' %}selected{% endif %}>Known Positive</option>
+                            <option value="Not Done" {% if followup.hiv_test == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Refused" {% if followup.hiv_test == 'Refused' %}selected{% endif %}>Refused</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Pregnancy Test</label>
+                        <select class="form-select" name="pregnancy_test">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if followup.pregnancy_test == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if followup.pregnancy_test == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if followup.pregnancy_test == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Not Applicable" {% if followup.pregnancy_test == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Syphilis Test</label>
+                        <select class="form-select" name="syphilis_test">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if followup.syphilis_test == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if followup.syphilis_test == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if followup.syphilis_test == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Pending" {% if followup.syphilis_test == 'Pending' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Hb Level (g/dL)</label>
+                        <input type="number" step="0.1" class="form-control" name="hb_level" 
+                               value="{{ followup.hb_level or '' }}" placeholder="e.g., 12.5">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">ALT Level (U/L)</label>
+                        <input type="number" class="form-control" name="alt_level" 
+                               value="{{ followup.alt_level or '' }}" placeholder="e.g., 25">
+                    </div>
+
+                    <!-- PEP & Treatment -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">PEP & Treatment</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">PEP Refill</label>
+                        <select class="form-select" name="pep_refill">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.pep_refill == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if followup.pep_refill == 'No' %}selected{% endif %}>No</option>
+                            <option value="Not Applicable" {% if followup.pep_refill == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">PEP Completion</label>
+                        <select class="form-select" name="pep_completion">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.pep_completion == 'Yes' %}selected{% endif %}>Yes - Completed</option>
+                            <option value="No" {% if followup.pep_completion == 'No' %}selected{% endif %}>No - Ongoing</option>
+                            <option value="Stopped" {% if followup.pep_completion == 'Stopped' %}selected{% endif %}>Stopped</option>
+                            <option value="Not Applicable" {% if followup.pep_completion == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Hep B Vaccine</label>
+                        <select class="form-select" name="hep_b_vaccine">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.hep_b_vaccine == 'Yes' %}selected{% endif %}>Yes - Given</option>
+                            <option value="No" {% if followup.hep_b_vaccine == 'No' %}selected{% endif %}>No</option>
+                            <option value="Completed" {% if followup.hep_b_vaccine == 'Completed' %}selected{% endif %}>Completed Series</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Tetanus Toxoid (TT)</label>
+                        <select class="form-select" name="tt_given">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.tt_given == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if followup.tt_given == 'No' %}selected{% endif %}>No</option>
+                            <option value="Completed" {% if followup.tt_given == 'Completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+
+                    <!-- Counseling & Support -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">Counseling & Support</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Trauma Counseling</label>
+                        <select class="form-select" name="trauma_counseling">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.trauma_counseling == 'Yes' %}selected{% endif %}>Yes - Provided</option>
+                            <option value="No" {% if followup.trauma_counseling == 'No' %}selected{% endif %}>No</option>
+                            <option value="Referred" {% if followup.trauma_counseling == 'Referred' %}selected{% endif %}>Referred</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Adherence Counseling</label>
+                        <select class="form-select" name="adherence_counseling">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if followup.adherence_counseling == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if followup.adherence_counseling == 'No' %}selected{% endif %}>No</option>
+                            <option value="Good" {% if followup.adherence_counseling == 'Good' %}selected{% endif %}>Good Adherence</option>
+                            <option value="Poor" {% if followup.adherence_counseling == 'Poor' %}selected{% endif %}>Poor Adherence</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Referral Update</label>
+                        <select class="form-select" name="referral">
+                            <option value="">Select</option>
+                            <option value="None" {% if followup.referral == 'None' %}selected{% endif %}>No Referral</option>
+                            <option value="Police" {% if followup.referral == 'Police' %}selected{% endif %}>Police Update</option>
+                            <option value="Legal" {% if followup.referral == 'Legal' %}selected{% endif %}>Legal Aid Update</option>
+                            <option value="Shelter" {% if followup.referral == 'Shelter' %}selected{% endif %}>Shelter Update</option>
+                            <option value="Other" {% if followup.referral == 'Other' %}selected{% endif %}>Other Service</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-12">
+                        <label class="form-label">Referral Details</label>
+                        <input type="text" class="form-control" name="referral_update" 
+                               value="{{ followup.referral_update or '' }}"
+                               placeholder="Details about referral update...">
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="col-12">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="notes" rows="4" 
+                                  placeholder="Any additional observations, recommendations, or follow-up actions...">
+                            {{- followup.notes or '' -}}
+                        </textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-12 mt-4">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success px-5">
+                                <i class="fas fa-save me-2"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate next appointment based on follow-up type
+    const followupDateInput = document.querySelector('input[name="followup_date"]');
+    const nextAppointmentInput = document.querySelector('input[name="next_appointment"]');
+    const followupType = "{{ followup.followup_type }}";
+    
+    if (followupDateInput && nextAppointmentInput && !nextAppointmentInput.value) {
+        followupDateInput.addEventListener('change', function() {
+            if (this.value) {
+                const followupDate = new Date(this.value);
+                const nextAppointment = new Date(followupDate);
+                
+                if (followupType === '2weeks') {
+                    nextAppointment.setDate(nextAppointment.getDate() + 14); // 2 weeks
+                } else if (followupType === '1month') {
+                    nextAppointment.setMonth(nextAppointment.getMonth() + 1); // 1 month
+                } else if (followupType === '3months') {
+                    nextAppointment.setMonth(nextAppointment.getMonth() + 3); // 3 months
+                }
+                // 6 months doesn't need next appointment
+                
+                // Format date for input (YYYY-MM-DD)
+                const formattedDate = nextAppointment.toISOString().split('T')[0];
+                nextAppointmentInput.value = formattedDate;
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+</style>
+{% endblock %}

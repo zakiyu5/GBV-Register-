@@ -1,49 +1,292 @@
 {% extends "base.html" %}
+
+{% block title %}Reports - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-chart-bar me-2"></i>Reports & Analytics
+{% endblock %}
+
+{% block page_subtitle %}
+{{ period }} Report: {{ total_cases }} total cases
+{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-outline-primary" onclick="window.print()">
+    <i class="fas fa-print me-2"></i> Print Report
+</button>
+<a href="{{ url_for('export_csv', period=current_period, search=search, sex=sex, violence=violence, age_group=age_group, start_date=custom_start, end_date=custom_end) }}" 
+   class="btn btn-success">
+    <i class="fas fa-download me-2"></i> Export CSV
+</a>
+{% endblock %}
+
 {% block content %}
-<h2>{{ period.capitalize() }} Report ({{ start_date }} to {{ end_date }})</h2>
-<a href="/reports?period=daily" class="btn btn-sm btn-secondary">Daily</a>
-<a href="/reports?period=weekly" class="btn btn-sm btn-secondary">Weekly</a>
-<a href="/reports?period=monthly" class="btn btn-sm btn-secondary">Monthly</a>
-<a href="/reports?period=quarterly" class="btn btn-sm btn-secondary">Quarterly</a>
-<a href="/reports?period=yearly" class="btn btn-sm btn-secondary">Yearly</a>
-<br><br>
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Serial No.</th>
-            <th>Name</th>
-            <th>Gender</th>
-            <th>Age</th>
-            <th>Incident Date</th>
-            <th>Type of Violence</th>
-            <th>PEP Given</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for record in records %}
-        <tr>
-            <td>{{ record['serial_no'] }}</td>
-            <td>{{ record['client_name'] }}</td>
-            <td>{{ record['gender'] }}</td>
-            <td>{{ record['age'] }}</td>
-            <td>{{ record['incident_date'] }}</td>
-            <td>{{ record['type_violence'] }}</td>
-            <td>{{ record['pep_given'] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<div class="mt-4">
-    <a href="/" class="btn btn-primary">← Back to Data Entry</a>
-    <a href="/records" class="btn btn-secondary ms-2">View All Records</a>
-
-    <!-- Export Buttons -->
-    <div class="btn-group ms-3" role="group">
-        <a href="/export/csv?period={{ current_period }}" class="btn btn-success">Download CSV</a>
-        <a href="/export/excel?period={{ current_period }}" class="btn btn-info text-white">Download Excel</a>
+<!-- Summary Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="stat-icon bg-primary text-white mx-auto mb-3">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3 class="stat-value">{{ total_cases }}</h3>
+            <p class="stat-label">Total Cases</p>
+        </div>
     </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="stat-icon bg-info text-white mx-auto mb-3">
+                <i class="fas fa-female"></i>
+            </div>
+            <h3 class="stat-value">{{ female_cases }}</h3>
+            <p class="stat-label">Female Cases</p>
+            <small class="text-muted">{{ female_pct }}% of total</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="stat-icon bg-warning text-white mx-auto mb-3">
+                <i class="fas fa-child"></i>
+            </div>
+            <h3 class="stat-value">{{ child_cases }}</h3>
+            <p class="stat-label">Children (&lt;18)</p>
+            <small class="text-muted">{{ child_pct }}% of total</small>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="stat-icon bg-success text-white mx-auto mb-3">
+                <i class="fas fa-pills"></i>
+            </div>
+            <h3 class="stat-value">{{ pep_cases }}</h3>
+            <p class="stat-label">PEP Given</p>
+            <small class="text-muted">{{ pep_pct }}% of total</small>
+        </div>
+    </div>
+</div>
 
-    <!-- Optional: Quick Print Button (uses browser print → save as PDF) -->
-    <a href="/print-report?period={{ current_period }}" target="_blank" class="btn btn-outline-danger ms-2">
-        Print Official Register (PDF)
-    </a></div>{% endblock %}
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Report Filters</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Period</label>
+                <select class="form-select" name="period" onchange="this.form.submit()">
+                    <option value="all" {% if current_period == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="daily" {% if current_period == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if current_period == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="monthly" {% if current_period == 'monthly' %}selected{% endif %}>Monthly</option>
+                    <option value="quarterly" {% if current_period == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                    <option value="yearly" {% if current_period == 'yearly' %}selected{% endif %}>Yearly</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sex</label>
+                <select class="form-select" name="sex">
+                    <option value="">All</option>
+                    <option value="F" {% if sex == 'F' %}selected{% endif %}>Female</option>
+                    <option value="M" {% if sex == 'M' %}selected{% endif %}>Male</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Violence Type</label>
+                <select class="form-select" name="violence">
+                    <option value="">All</option>
+                    <option value="Physical" {% if violence == 'Physical' %}selected{% endif %}>Physical</option>
+                    <option value="Sexual" {% if violence == 'Sexual' %}selected{% endif %}>Sexual</option>
+                    <option value="Emotional" {% if violence == 'Emotional' %}selected{% endif %}>Emotional</option>
+                    <option value="Economic" {% if violence == 'Economic' %}selected{% endif %}>Economic</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Age Group</label>
+                <select class="form-select" name="age_group">
+                    <option value="">All</option>
+                    <option value="child" {% if age_group == 'child' %}selected{% endif %}>Child (&lt;18)</option>
+                    <option value="adult" {% if age_group == 'adult' %}selected{% endif %}>Adult</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Custom Date Range</label>
+                <div class="input-group">
+                    <input type="date" class="form-control" name="start_date" value="{{ custom_start }}">
+                    <span class="input-group-text">to</span>
+                    <input type="date" class="form-control" name="end_date" value="{{ custom_end }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" 
+                       placeholder="Search by name, ID, serial...">
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i> Apply Filters
+                </button>
+                <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-redo me-2"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reports Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-table me-2"></i>Case Details</h6>
+        <span class="badge bg-primary">{{ records|length }} records</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Age/Sex</th>
+                        <th>Violence Type</th>
+                        <th>Arrival Date</th>
+                        <th>HIV Test</th>
+                        <th>PEP</th>
+                        <th>Follow-ups</th>
+                        <th>Outcome</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.patient_id }}</td>
+                        <td>{{ record.client_name }}</td>
+                        <td>{{ record.age }} / {{ record.sex }}</td>
+                        <td><span class="badge bg-warning">{{ record.type_violence }}</span></td>
+                        <td>{{ record.arrival_datetime[:10] if record.arrival_datetime else 'N/A' }}</td>
+                        <td>{{ record.hiv_test_initial or 'N/A' }}</td>
+                        <td>
+                            {% if record.pep_given == 'Yes' %}
+                            <span class="badge bg-success">Yes</span>
+                            {% else %}
+                            <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ record.followup_count or 0 }}/4</span>
+                        </td>
+                        <td>
+                            {% if record.outcome %}
+                            <span class="badge bg-success">{{ record.outcome }}</span>
+                            {% else %}
+                            <span class="badge bg-primary">Active</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-chart-bar fa-2x mb-3"></i>
+                                <p class="mb-0">No records found for selected filters</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Charts -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Violence Type Distribution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="violenceDistributionChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Monthly Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyTrendChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Prepare data for charts
+const violenceTypes = {};
+const monthlyData = {};
+
+{% for record in records %}
+// Count violence types
+const violenceType = '{{ record.type_violence }}' || 'Unknown';
+violenceTypes[violenceType] = (violenceTypes[violenceType] || 0) + 1;
+
+// Count by month
+const month = '{{ record.arrival_datetime }}'.substring(0, 7); // YYYY-MM
+if (month) {
+    monthlyData[month] = (monthlyData[month] || 0) + 1;
+}
+{% endfor %}
+
+// Violence Distribution Chart
+new Chart(document.getElementById('violenceDistributionChart'), {
+    type: 'pie',
+    data: {
+        labels: Object.keys(violenceTypes),
+        datasets: [{
+            data: Object.values(violenceTypes),
+            backgroundColor: [
+                '#1a5276', '#2e86c1', '#3498db', '#5dade2', '#85c1e9',
+                '#aed6f1', '#d6eaf8'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+// Monthly Trend Chart
+const months = Object.keys(monthlyData).sort();
+const counts = months.map(m => monthlyData[m]);
+
+new Chart(document.getElementById('monthlyTrendChart'), {
+    type: 'bar',
+    data: {
+        labels: months,
+        datasets: [{
+            label: 'Cases',
+            data: counts,
+            backgroundColor: 'rgba(26, 82, 118, 0.7)',
+            borderColor: 'var(--primary-color)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

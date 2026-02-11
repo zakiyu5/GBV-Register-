@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Add Outcome - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-flag me-2"></i>Record Client Outcome
+{% endblock %}
+
+{% block page_subtitle %}
+For Patient: {{ patient.client_name }} (ID: {{ patient.patient_id }})
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+   class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i> Back to Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Patient Summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    <div class="user-avatar mx-auto bg-primary text-white mb-3">
+                        <i class="fas fa-user-injured fa-2x"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">{{ patient.client_name }}</h5>
+                    <small class="text-muted">{{ patient.patient_id }}</small>
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Age/Sex</small>
+                                <span class="fw-bold">{{ patient.age }} / {{ patient.sex }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Arrival Date</small>
+                                <span class="fw-bold">{{ patient.arrival_datetime[:10] }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <small class="text-muted d-block">Violence Type</small>
+                                <span class="badge bg-warning">{{ patient.type_violence }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Recording an outcome marks the completion of this patient's care journey.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outcome Form -->
+    <form method="POST">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-warning text-white">
+                <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Outcome Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Outcome Type -->
+                    <div class="col-md-6">
+                        <label class="form-label">Outcome Type <span class="text-danger">*</span></label>
+                        <select class="form-select" name="outcome_type" required>
+                            <option value="">Select outcome type</option>
+                            <option value="completed" {% if existing_outcome and existing_outcome.outcome_type == 'completed' %}selected{% endif %}>
+                                Completed Treatment
+                            </option>
+                            <option value="transferred" {% if existing_outcome and existing_outcome.outcome_type == 'transferred' %}selected{% endif %}>
+                                Transferred to Another Facility
+                            </option>
+                            <option value="defaulted" {% if existing_outcome and existing_outcome.outcome_type == 'defaulted' %}selected{% endif %}>
+                                Defaulted/Lost to Follow-up
+                            </option>
+                            <option value="died" {% if existing_outcome and existing_outcome.outcome_type == 'died' %}selected{% endif %}>
+                                Died
+                            </option>
+                            <option value="other" {% if existing_outcome and existing_outcome.outcome_type == 'other' %}selected{% endif %}>
+                                Other
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Outcome Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="outcome_date" 
+                               value="{{ existing_outcome.outcome_date[:10] if existing_outcome else today }}" 
+                               required>
+                    </div>
+
+                    <!-- Outcome Description -->
+                    <div class="col-12">
+                        <label class="form-label">Outcome Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="outcome" rows="4" required 
+                                  placeholder="Describe the outcome of this case...">
+                            {{- existing_outcome.outcome if existing_outcome else '' -}}
+                        </textarea>
+                    </div>
+
+                    <!-- Additional Notes -->
+                    <div class="col-12">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" 
+                                  placeholder="Any additional notes or recommendations...">
+                            {{- existing_outcome.notes if existing_outcome else '' -}}
+                        </textarea>
+                    </div>
+
+                    <!-- Warning for Completed Outcomes -->
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Note:</strong> Once an outcome is recorded, the patient will be marked as completed 
+                            and will no longer appear in active follow-up lists.
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning px-5">
+                                <i class="fas fa-save me-2"></i> 
+                                {% if existing_outcome %}Update Outcome{% else %}Record Outcome{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Outcome Types Information -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Outcome Type Descriptions</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="text-success">
+                                <i class="fas fa-check-circle me-2"></i>Completed Treatment
+                            </h6>
+                            <p class="small mb-0">Patient successfully completed all required follow-ups and treatment.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="text-info">
+                                <i class="fas fa-exchange-alt me-2"></i>Transferred
+                            </h6>
+                            <p class="small mb-0">Patient transferred to another healthcare facility for continued care.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="text-warning">
+                                <i class="fas fa-user-slash me-2"></i>Defaulted
+                            </h6>
+                            <p class="small mb-0">Patient stopped coming for follow-up visits without notification.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="text-danger">
+                                <i class="fas fa-cross me-2"></i>Died
+                            </h6>
+                            <p class="small mb-0">Patient passed away during treatment or follow-up period.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default outcome date to today if not set
+    const outcomeDateInput = document.querySelector('input[name="outcome_date"]');
+    if (outcomeDateInput && !outcomeDateInput.value) {
+        outcomeDateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const outcomeType = document.querySelector('select[name="outcome_type"]').value;
+            const outcomeDate = document.querySelector('input[name="outcome_date"]').value;
+            const outcomeDesc = document.querySelector('textarea[name="outcome"]').value.trim();
+            
+            if (!outcomeType || !outcomeDate || !outcomeDesc) {
+                e.preventDefault();
+                alert('Please fill in all required fields (Outcome Type, Date, and Description).');
+                return false;
+            }
+            
+            // Confirm if marking as died
+            if (outcomeType === 'died') {
+                if (!confirm('Are you sure you want to mark this patient as deceased? This action cannot be undone.')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    }
+});
+</script>
+
+<style>
+.user-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card.border {
+    border-left: 4px solid;
+}
+
+.card.border .text-success { border-left-color: #28a745; }
+.card.border .text-info { border-left-color: #17a2b8; }
+.card.border .text-warning { border-left-color: #ffc107; }
+.card.border .text-danger { border-left-color: #dc3545; }
+</style>
+{% endblock %}

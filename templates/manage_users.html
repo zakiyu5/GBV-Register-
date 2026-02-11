@@ -1,48 +1,183 @@
-<!-- templates/manage_users.html -->
 {% extends "base.html" %}
+
+{% block title %}Manage Users - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-users-cog me-2"></i>Manage System Users
+{% endblock %}
+
+{% block page_subtitle %}
+Add, edit, or remove user accounts for the GBV Register system
+{% endblock %}
+
 {% block content %}
-<h2>Manage Nurse Accounts</h2>
-<form method="POST" class="mb-4">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-3">
-            <input type="text" class="form-control" name="username" placeholder="Username" required>
-        </div>
-        <div class="col-md-3">
-            <input type="password" class="form-control" name="password" placeholder="Password" required>
-        </div>
-        <div class="col-md-3">
-            <select class="form-select" name="role" required>
-                <option value="nurse">Nurse</option>
-                <option value="admin">Admin</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-success w-100">Create User</button>
+<div class="row">
+    <!-- Add User Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New User</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" required 
+                               placeholder="Enter username">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" name="full_name" required 
+                               placeholder="Enter full name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" name="password" required 
+                               placeholder="Enter password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" name="role" required>
+                            <option value="">Select role</option>
+                            <option value="nurse">Nurse</option>
+                            <option value="admin">Administrator</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="counselor">Counselor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department" 
+                               placeholder="Enter department">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-save me-2"></i> Create User
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
-</form>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Role</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for user in users %}
-        <tr>
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.role }}</td>
-            <td>
-                <form method="POST" action="/admin/users/delete/{{ user.id }}" style="display:inline;">
-                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+    <!-- Users List -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-users me-2"></i>System Users</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.full_name }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                    <span class="badge bg-danger">Administrator</span>
+                                    {% elif user.role == 'nurse' %}
+                                    <span class="badge bg-primary">Nurse</span>
+                                    {% elif user.role == 'doctor' %}
+                                    <span class="badge bg-success">Doctor</span>
+                                    {% else %}
+                                    <span class="badge bg-info">{{ user.role|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.department or 'N/A' }}</td>
+                                <td>{{ user.created_at[:10] }}</td>
+                                <td>
+                                    {% if user.username != 'admin' %}
+                                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Delete user {{ user.full_name }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted">System</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-users-slash fa-2x mb-3"></i>
+                                        <p class="mb-0">No users found</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Role Information -->
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Role Descriptions</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card border">
+                    <div class="card-body text-center">
+                        <div class="mb-2">
+                            <i class="fas fa-user-shield fa-2x text-danger"></i>
+                        </div>
+                        <h6>Administrator</h6>
+                        <p class="small text-muted mb-0">Full system access, user management</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border">
+                    <div class="card-body text-center">
+                        <div class="mb-2">
+                            <i class="fas fa-user-nurse fa-2x text-primary"></i>
+                        </div>
+                        <h6>Nurse</h6>
+                        <p class="small text-muted mb-0">Patient registration, follow-ups</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border">
+                    <div class="card-body text-center">
+                        <div class="mb-2">
+                            <i class="fas fa-user-md fa-2x text-success"></i>
+                        </div>
+                        <h6>Doctor</h6>
+                        <p class="small text-muted mb-0">Medical assessments, prescriptions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border">
+                    <div class="card-body text-center">
+                        <div class="mb-2">
+                            <i class="fas fa-hands-helping fa-2x text-info"></i>
+                        </div>
+                        <h6>Counselor</h6>
+                        <p class="small text-muted mb-0">Trauma counseling, psychosocial support</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

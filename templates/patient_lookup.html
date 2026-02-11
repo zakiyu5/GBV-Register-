@@ -1,0 +1,808 @@
+{% extends "base.html" %}
+
+{% block title %}Find Patient - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-search me-2"></i>Find Patient for Follow-up
+{% endblock %}
+
+{% block page_subtitle %}
+Search for existing patients to add follow-up visits or update information
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('register_patient') }}" class="btn btn-success">
+    <i class="fas fa-user-plus me-2"></i> New Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Search Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3" style="color: var(--primary-color);">
+                <i class="fas fa-search me-2"></i>Search Patient
+            </h5>
+            <form method="POST" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search By</label>
+                    <select class="form-select" name="search_by" required>
+                        <option value="patient_id" selected>OPD Number</option>
+                        <option value="national_id">National ID</option>
+                        <option value="name">Client Name</option>
+                        <option value="contact">Contact Number</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Search Term</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="search_term" 
+                               placeholder="Enter OPD number (e.g., 20202, 23022)" required>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search me-1"></i> Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearSearchForm()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Quick Actions</label>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('all_records') }}" class="btn btn-outline-info">
+                            <i class="fas fa-list me-1"></i> View All Records
+                        </a>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    Tip: You can search by OPD Number (e.g., 20202, 23022), Name, Contact Number, or National ID
+                </small>
+            </div>
+        </div>
+    </div>
+
+    {% if patient %}
+    <!-- Patient Information Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-user-circle me-2"></i>Patient Information
+                <span class="float-end">
+                    <small>Registered: {{ patient.created_at|format_datetime('%d/%m/%Y') }}</small>
+                </span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">OPD Number:</div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-info fs-6">{{ patient.patient_id }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Full Name:</div>
+                        <div class="col-sm-8">{{ patient.client_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Age/Sex:</div>
+                        <div class="col-sm-8">{{ patient.age }} years / {{ patient.sex }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Contact:</div>
+                        <div class="col-sm-8">
+                            {% if patient.contact_no %}
+                            <i class="fas fa-phone me-1"></i> {{ patient.contact_no }}
+                            {% else %}
+                            <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">National ID:</div>
+                        <div class="col-sm-8">{{ patient.national_id or 'Not provided' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Arrival Date:</div>
+                        <div class="col-sm-8">
+                            <i class="far fa-calendar-alt me-1"></i> 
+                            {{ patient.arrival_datetime|format_datetime('%d/%m/%Y %H:%M') }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Violence Type:</div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-warning">{{ patient.type_violence or 'Not specified' }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Marital Status:</div>
+                        <div class="col-sm-8">{{ patient.marital_status or 'Not specified' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Case Type:</div>
+                        <div class="col-sm-8">{{ patient.type_case or 'Not specified' }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 fw-bold">Status:</div>
+                        <div class="col-sm-8">
+                            {% if outcome %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif follow_ups|length >= 4 %}
+                            <span class="badge bg-info">All Follow-ups Done</span>
+                            {% else %}
+                            <span class="badge bg-primary">In Progress</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if not outcome %}
+                            {# Calculate available follow-up types #}
+                            {% set existing_types = [] %}
+                            {% for fu in follow_ups %}
+                                {% set _ = existing_types.append(fu.followup_type) %}
+                            {% endfor %}
+                            
+                            {% set all_types = ['2weeks', '1month', '3months', '6months'] %}
+                            {% set available_types = [] %}
+                            {% for type in all_types %}
+                                {% if type not in existing_types %}
+                                    {% set _ = available_types.append(type) %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if patient and available_types|length > 0 %}
+                            <a href="{{ url_for('add_followup', patient_id=patient.patient_id) }}" 
+                               class="btn btn-success">
+                                <i class="fas fa-calendar-plus me-2"></i> Add Follow-up
+                            </a>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <a href="{{ url_for('add_outcome', patient_id=patient.patient_id) }}" 
+                           class="btn btn-warning">
+                            <i class="fas fa-flag me-2"></i> Record Outcome
+                        </a>
+                        
+                        <a href="{{ url_for('edit_patient', patient_id=patient.patient_id) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-edit me-2"></i> Edit Patient
+                        </a>
+                        
+                        <a href="{{ url_for('edit_initial_visit', patient_id=patient.patient_id) }}" 
+                           class="btn btn-info">
+                            <i class="fas fa-file-medical me-2"></i> Edit Initial Visit
+                        </a>
+                        
+                        <a href="{{ url_for('export_patient', patient_id=patient.patient_id) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-download me-2"></i> Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical Information Summary -->
+    <div class="row mb-4">
+        {% if initial_visit %}
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Initial Medical Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <small class="text-muted">HIV Test:</small>
+                            <div class="fw-bold">{{ initial_visit.hiv_test_initial or 'Not done' }}</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted">PEP Given:</small>
+                            <div class="fw-bold">
+                                {% if initial_visit.pep_given == 'Yes' %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <small class="text-muted">Trauma Counseling:</small>
+                            <div class="fw-bold">
+                                {% if initial_visit.trauma_counseling_initial == 'Yes' %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted">Referral:</small>
+                            <div class="fw-bold">{{ initial_visit.referral_initial or 'No' }}</div>
+                        </div>
+                    </div>
+                    {% if initial_visit.notes %}
+                    <hr class="my-2">
+                    <div class="row">
+                        <div class="col-12">
+                            <small class="text-muted">Notes:</small>
+                            <div class="fw-bold small">{{ initial_visit.notes }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Initial Visit Not Recorded</h6>
+                </div>
+                <div class="card-body text-center">
+                    <i class="fas fa-file-medical-alt fa-3x text-warning mb-3"></i>
+                    <p class="mb-0">No initial visit information recorded for this patient.</p>
+                    <a href="{{ url_for('edit_initial_visit', patient_id=patient.patient_id) }}" 
+                       class="btn btn-sm btn-warning mt-3">
+                        <i class="fas fa-plus me-1"></i> Add Initial Visit
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Follow-up Progress</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        {% for type in ['2weeks', '1month', '3months', '6months'] %}
+                        {% set fu_found = false %}
+                        {% for fu in follow_ups %}
+                            {% if fu.followup_type == type %}
+                                {% set fu_found = true %}
+                                {% set this_fu = fu %}
+                            {% endif %}
+                        {% endfor %}
+                        <div class="col-3">
+                            <div class="mb-2">
+                                {% if fu_found %}
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                                {% else %}
+                                <i class="far fa-circle fa-2x text-muted"></i>
+                                {% endif %}
+                            </div>
+                            <small class="d-block fw-bold">
+                                {{ type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }}
+                            </small>
+                            <small class="text-muted">
+                                {% if fu_found %}
+                                {{ this_fu.followup_date|format_date if this_fu.followup_date else 'Scheduled' }}
+                                {% else %}
+                                Pending
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="progress mt-3" style="height: 10px;">
+                        {% set completed_count = follow_ups|length %}
+                        {% set progress_percentage = (completed_count / 4) * 100 %}
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ progress_percentage }}%;" 
+                             aria-valuenow="{{ completed_count }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="4">
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small>{{ completed_count }} of 4 follow-ups completed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-ups Timeline -->
+    {% if follow_ups %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Follow-up Visits</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Follow-up Date</th>
+                            <th>Actual Return</th>
+                            <th>Next Appointment</th>
+                            <th>HIV Test</th>
+                            <th>PEP Refill</th>
+                            <th>Counseling</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fu in follow_ups %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ fu.followup_type|replace('2weeks', '2 Weeks')|replace('1month', '1 Month')|replace('3months', '3 Months')|replace('6months', '6 Months') }}
+                                </span>
+                            </td>
+                            <td>{{ fu.followup_date|format_date if fu.followup_date else 'Not set' }}</td>
+                            <td>
+                                {% if fu.actual_return_date %}
+                                {{ fu.actual_return_date|format_date }}
+                                {% else %}
+                                <span class="text-muted">Not returned</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ fu.next_appointment|format_date if fu.next_appointment else 'Not set' }}</td>
+                            <td>
+                                {% if fu.hiv_test %}
+                                <span class="badge bg-info">{{ fu.hiv_test }}</span>
+                                {% else %}
+                                <span class="text-muted">Not done</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fu.pep_refill == 'Yes' %}
+                                <span class="badge bg-success">Yes</span>
+                                {% elif fu.pep_refill == 'No' %}
+                                <span class="badge bg-secondary">No</span>
+                                {% else %}
+                                <span class="text-muted">Not recorded</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fu.trauma_counseling == 'Yes' %}
+                                <span class="badge bg-success">Yes</span>
+                                {% elif fu.trauma_counseling == 'No' %}
+                                <span class="badge bg-secondary">No</span>
+                                {% else %}
+                                <span class="text-muted">Not recorded</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('edit_followup', followup_id=fu.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('delete_followup', followup_id=fu.id) }}" 
+                                      class="d-inline" onsubmit="return confirm('Delete this follow-up?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Client Outcome -->
+    {% if outcome %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="fas fa-flag me-2"></i>Client Outcome</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="fw-bold">Outcome:</div>
+                    <p class="mb-0">{{ outcome.outcome }}</p>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Date:</div>
+                    <p class="mb-0">{{ outcome.outcome_date|format_date if outcome.outcome_date else 'Not specified' }}</p>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-bold">Type:</div>
+                    <p class="mb-0">
+                        <span class="badge 
+                            {% if outcome.outcome_type == 'completed' %}bg-success
+                            {% elif outcome.outcome_type == 'transferred' %}bg-info
+                            {% elif outcome.outcome_type == 'defaulted' %}bg-danger
+                            {% elif outcome.outcome_type == 'died' %}bg-dark
+                            {% else %}bg-secondary{% endif %}">
+                            {{ outcome.outcome_type|title if outcome.outcome_type else 'Not specified' }}
+                        </span>
+                    </p>
+                </div>
+                {% if outcome.notes %}
+                <div class="col-md-12 mt-3">
+                    <div class="fw-bold">Notes:</div>
+                    <p class="mb-0">{{ outcome.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Stats -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="stat-icon bg-info text-white mx-auto mb-3">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <h4 class="stat-value">{{ follow_ups|length }}</h4>
+                    <p class="stat-label">Follow-ups</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="stat-icon bg-success text-white mx-auto mb-3">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <h4 class="stat-value">
+                        {% if initial_visit and initial_visit.pep_given == 'Yes' %}Yes{% else %}No{% endif %}
+                    </h4>
+                    <p class="stat-label">PEP Initiated</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="stat-icon bg-warning text-white mx-auto mb-3">
+                        <i class="fas fa-comment-medical"></i>
+                    </div>
+                    <h4 class="stat-value">
+                        {% set counseling_count = 0 %}
+                        {% for fu in follow_ups %}
+                            {% if fu.trauma_counseling == 'Yes' %}
+                                {% set counseling_count = counseling_count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if initial_visit and initial_visit.trauma_counseling_initial == 'Yes' %}
+                            {{ counseling_count + 1 }}
+                        {% else %}
+                            {{ counseling_count }}
+                        {% endif %}
+                    </h4>
+                    <p class="stat-label">Counseling Sessions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="stat-icon bg-danger text-white mx-auto mb-3">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <h4 class="stat-value">
+                        {% if outcome %}
+                            Completed
+                        {% elif follow_ups|length >= 4 %}
+                            Ready
+                        {% else %}
+                            {{ 4 - follow_ups|length }} left
+                        {% endif %}
+                    </h4>
+                    <p class="stat-label">Status</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% elif request.method == 'POST' and not patient %}
+    <!-- No Results Found -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-search fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Patient Found</h4>
+            <p class="text-muted">No patient matches your search criteria for "{{ search_term }}".</p>
+            <p class="text-muted small">Try searching by OPD number (20202), name, or contact number.</p>
+        </div>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('register_patient') }}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i> Register New Patient
+            </a>
+            <button class="btn btn-outline-secondary" onclick="clearSearchForm()">
+                <i class="fas fa-redo me-2"></i> Clear Search
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Search Tips -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Quick Search Tips</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- By OPD Number -->
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="d-flex">
+                        <div class="me-3 text-primary">
+                            <i class="fas fa-hospital-user fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">By OPD Number</h6>
+                            <p class="text-muted small mb-0">
+                                <strong>Format:</strong> Hospital OPD number<br>
+                                <strong>Example:</strong> 20202, 23022, 45001
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- By Name -->
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="d-flex">
+                        <div class="me-3 text-success">
+                            <i class="fas fa-user fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">By Name</h6>
+                            <p class="text-muted small mb-0">
+                                <strong>Partial names work</strong><br>
+                                <strong>Example:</strong> "John" for "John Doe"<br>
+                                Case-insensitive search
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- By Contact -->
+                <div class="col-md-4">
+                    <div class="d-flex">
+                        <div class="me-3 text-info">
+                            <i class="fas fa-phone fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">By Contact</h6>
+                            <p class="text-muted small mb-0">
+                                <strong>Search by phone number</strong><br>
+                                Full or partial numbers<br>
+                                Include country code if known
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Search Options -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-3 fs-4"></i>
+                            <div>
+                                <strong>Additional Search Options:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>National ID:</strong> Search by national identification number</li>
+                                    <li><strong>Multiple fields:</strong> You can combine different search criteria</li>
+                                    <li><strong>Exact match:</strong> For OPD numbers, use the exact number (20202)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-focus search input
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="search_term"]');
+    if (searchInput) {
+        searchInput.focus();
+    }
+    
+    // Set search by based on input pattern
+    const searchBySelect = document.querySelector('select[name="search_by"]');
+    const searchTermInput = document.querySelector('input[name="search_term"]');
+    
+    if (searchTermInput && searchBySelect) {
+        searchTermInput.addEventListener('input', function() {
+            const value = this.value.trim();
+            
+            // Auto-detect search type based on input
+            if (/^\d+$/.test(value)) {
+                // If it's all digits
+                if (value.length >= 10) {
+                    // Long numbers (10+ digits) are likely contacts
+                    searchBySelect.value = 'contact';
+                } else if (value.length >= 5 && value.length <= 9) {
+                    // 5-9 digit numbers are likely OPD numbers
+                    searchBySelect.value = 'patient_id';
+                }
+            } else if (value.includes('@')) {
+                // If it contains @, it might be an email
+                searchBySelect.value = 'contact';
+            }
+        });
+        
+        // Show examples in placeholder based on selected option
+        searchBySelect.addEventListener('change', function() {
+            const examples = {
+                'patient_id': 'e.g., 20202, 23022',
+                'name': 'e.g., John, Mary Smith',
+                'contact': 'e.g., 0781234567',
+                'national_id': 'e.g., CM123456789ABCD'
+            };
+            
+            if (examples[this.value]) {
+                searchTermInput.placeholder = `Enter ${this.options[this.selectedIndex].text.toLowerCase()} (${examples[this.value]})`;
+            }
+        });
+        
+        // Initialize placeholder on page load
+        searchBySelect.dispatchEvent(new Event('change'));
+    }
+});
+
+// Clear search form
+function clearSearchForm() {
+    const searchInput = document.querySelector('input[name="search_term"]');
+    const searchSelect = document.querySelector('select[name="search_by"]');
+    
+    if (searchInput) searchInput.value = '';
+    if (searchSelect) searchSelect.selectedIndex = 0;
+    
+    // Focus back on search input
+    if (searchInput) searchInput.focus();
+}
+
+// Show loading indicator on form submit
+const form = document.querySelector('form');
+if (form) {
+    form.addEventListener('submit', function(e) {
+        const btn = this.querySelector('button[type="submit"]');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Searching...';
+            btn.disabled = true;
+            
+            // Restore button text after 5 seconds (in case of error)
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 5000);
+        }
+    });
+}
+</script>
+
+<style>
+.card {
+    transition: transform 0.3s ease;
+    border-radius: 10px;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.8em;
+    border-radius: 20px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 10px 0;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+.input-group .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.form-select, .form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.form-select:focus, .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .d-flex.flex-wrap {
+        justify-content: center;
+    }
+    
+    .btn {
+        margin-bottom: 5px;
+    }
+    
+    .input-group {
+        flex-wrap: nowrap;
+    }
+    
+    .input-group .btn {
+        padding: 0.375rem 0.75rem;
+    }
+}
+</style>
+{% endblock %}

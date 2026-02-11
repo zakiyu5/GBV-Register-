@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GBV Care System - Kayunga Regional Referral Hospital</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --secondary-color: #28a745;
+            --accent-color: #ff6b35;
+            --light-bg: #f8f9fa;
+            --dark-bg: #1a1a2e;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(rgba(0, 86, 179, 0.9), rgba(0, 86, 179, 0.8)),
+                        url("{{ url_for('static', filename='images/hospital-hero.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+            animation: float 60s linear infinite;
+        }
+        
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100px, -100px); }
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            padding: 60px 20px;
+        }
+        
+        .hospital-logo {
+            max-width: 200px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 600px;
+        }
+        
+        .btn-hero {
+            background: linear-gradient(135deg, var(--accent-color), #e55a2b);
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-hero:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.6);
+            color: white;
+        }
+        
+        /* Stats Section */
+        .stats-section {
+            background: var(--light-bg);
+            padding: 80px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), #007bff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        /* About Section */
+        .about-section {
+            padding: 100px 0;
+            background: white;
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: var(--accent-color);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 50px;
+            max-width: 700px;
+        }
+        
+        .info-card {
+            background: var(--light-bg);
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            height: 100%;
+            border-left: 5px solid var(--primary-color);
+            transition: transform 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateX(10px);
+        }
+        
+        .info-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+        
+        .info-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+        
+        /* Core Values */
+        .values-section {
+            background: var(--dark-bg);
+            color: white;
+            padding: 100px 0;
+        }
+        
+        .value-item {
+            text-align: center;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .value-icon {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 25px;
+        }
+        
+        .value-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: white;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #1a1a1a;
+            color: white;
+            padding: 60px 0 30px;
+        }
+        
+        .footer-logo {
+            max-width: 150px;
+            margin-bottom: 25px;
+        }
+        
+        .footer-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: white;
+        }
+        
+        .footer-links {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+        
+        .footer-links a {
+            color: #aaa;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+        }
+        
+        .copyright {
+            text-align: center;
+            padding-top: 30px;
+            margin-top: 50px;
+            border-top: 1px solid #333;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .stat-number {
+                font-size: 2.5rem;
+            }
+            
+            .info-card, .stat-card {
+                margin-bottom: 30px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .btn-hero {
+                padding: 15px 30px;
+                font-size: 1rem;
+            }
+            
+            .section-title {
+                font-size: 1.8rem;
+            }
+        }
+        
+        /* Animation Classes */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Scroll to top button */
+        .scroll-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .scroll-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-top:hover {
+            background: var(--accent-color);
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll to Top Button -->
+    <div class="scroll-top" id="scrollTop">
+        <i class="fas fa-chevron-up"></i>
+    </div>
+    
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8 col-md-10 mx-auto text-center">
+                    <img src="{{ url_for('static', filename='images/logokayunga.jpg') }}" 
+                         alt="Kayunga Hospital Logo" 
+                         class="hospital-logo"
+                         onerror="this.style.display='none'">
+                    
+                    <h1 class="hero-title fade-in">
+                        Gender-Based Violence Patient Management System
+                    </h1>
+                    
+                    <p class="hero-subtitle fade-in">
+                        Providing compassionate care and comprehensive tracking for GBV survivors at Kayunga Regional Referral Hospital
+                    </p>
+                    
+                    <div class="mt-5 fade-in" style="animation-delay: 0.3s">
+                        <a href="{{ url_for('login') }}" class="btn btn-hero">
+                            <i class="fas fa-sign-in-alt"></i> Staff Login
+                        </a>
+                        <a href="#about" class="btn btn-outline-light btn-lg ms-3" style="border-radius: 50px; padding: 15px 30px;">
+                            <i class="fas fa-info-circle"></i> Learn More
+                        </a>
+                    </div>
+                    
+                    <div class="mt-5 fade-in" style="animation-delay: 0.5s">
+                        <p class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Secure • Confidential • Professional
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card fade-in">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-injured"></i>
+                        </div>
+                        <div class="stat-number" id="patientsCount">0</div>
+                        <div class="stat-label">Patients Served</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card fade-in" style="animation-delay: 0.2s">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-number" id="followupsCount">0</div>
+                        <div class="stat-label">Follow-ups Completed</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card fade-in" style="animation-delay: 0.4s">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div class="stat-number" id="staffCount">0</div>
+                        <div class="stat-label">Trained Staff</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card fade-in" style="animation-delay: 0.6s">
+                        <div class="stat-icon">
+                            <i class="fas fa-hand-holding-heart"></i>
+                        </div>
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Support Available</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-lg-10 mx-auto text-center">
+                    <h2 class="section-title fade-in">About Kayunga Regional Referral Hospital</h2>
+                    <p class="section-subtitle fade-in" style="animation-delay: 0.2s">
+                        Providing specialized healthcare services with compassion and excellence since 1973
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in">
+                        <div class="info-icon">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h3 class="info-title">Background</h3>
+                        <p>
+                            Kayunga RRH was established as a district Hospital in 1973 and upgraded to Regional Referral Hospital in October 2020. 
+                            Located in Kayunga town, approximately 70 kilometers from Kampala, serving a catchment population of 2.5 million people.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in" style="animation-delay: 0.2s">
+                        <div class="info-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h3 class="info-title">Our Vision</h3>
+                        <p>
+                            "A center of excellence in the delivery of specialized health services within the region." 
+                            We strive to be the leading healthcare provider through innovation, compassion, and excellence.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in" style="animation-delay: 0.4s">
+                        <div class="info-icon">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <h3 class="info-title">Our Mission</h3>
+                        <p>
+                            "To provide quality health services through specialized promotive, preventive, curative, training and research 
+                            services to the population in the region." We are committed to holistic healthcare delivery.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-card fade-in" style="animation-delay: 0.6s">
+                        <div class="info-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <h3 class="info-title">Our Mandate</h3>
+                        <p>
+                            "To provide specialized health care, train health workers and conduct research in line with the requirements 
+                            of the Ministry of Health." We serve as a training and research hub for healthcare professionals.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-card fade-in" style="animation-delay: 0.8s">
+                        <div class="info-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h3 class="info-title">Our Goal</h3>
+                        <p>
+                            To contribute to human capital development through reduction of poverty, improve livelihood and reduction 
+                            of morbidity and mortality in the region and beyond. We believe in healthcare as a foundation for development.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Core Values Section -->
+    <section class="values-section" id="values">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-lg-10 mx-auto text-center">
+                    <h2 class="section-title fade-in" style="color: white;">Our Core Values</h2>
+                    <p class="section-subtitle fade-in" style="animation-delay: 0.2s; color: #ccc;">
+                        The guiding principles that define our approach to healthcare delivery
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in">
+                        <div class="value-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <h3 class="value-title">Equity</h3>
+                        <p>
+                            We value and fairly treat all customers irrespective of gender, race, religion, health status, 
+                            ability, ethnic background and political affiliation.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in" style="animation-delay: 0.2s">
+                        <div class="value-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <h3 class="value-title">Integrity</h3>
+                        <p>
+                            We adhere to strong moral principles and being honest in all our dealings, maintaining the highest 
+                            ethical standards in healthcare delivery.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in" style="animation-delay: 0.4s">
+                        <div class="value-icon">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
+                        <h3 class="value-title">Client Centeredness</h3>
+                        <p>
+                            We focus on needs that reflect priorities of service recipients, ensuring patient-centered care 
+                            that respects individual dignity and preferences.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in" style="animation-delay: 0.6s">
+                        <div class="value-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h3 class="value-title">Professionalism</h3>
+                        <p>
+                            We adhere to professional codes of conduct and ethics, exhibiting high competence and best practices 
+                            as prescribed in healthcare professions.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in" style="animation-delay: 0.8s">
+                        <div class="value-icon">
+                            <i class="fas fa-hands-helping"></i>
+                        </div>
+                        <h3 class="value-title">Teamwork</h3>
+                        <p>
+                            We collaborate with others to achieve common goals, recognizing that quality healthcare requires 
+                            coordinated effort across disciplines.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="value-item fade-in" style="animation-delay: 1s">
+                        <div class="value-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h3 class="value-title">Accountability</h3>
+                        <p>
+                            We are responsible and answerable for our actions, ensuring transparency and taking ownership 
+                            of healthcare outcomes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- GBV System Features -->
+    <section class="about-section" style="background: var(--light-bg);" id="system">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-lg-10 mx-auto text-center">
+                    <h2 class="section-title fade-in">GBV Management System</h2>
+                    <p class="section-subtitle fade-in" style="animation-delay: 0.2s">
+                        A comprehensive digital solution for managing Gender-Based Violence cases with confidentiality and efficiency
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in" style="background: white;">
+                        <div class="info-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h3 class="info-title">Patient Registration</h3>
+                        <p>
+                            Secure and confidential registration of GBV survivors with comprehensive demographic and clinical information.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in" style="background: white; animation-delay: 0.2s">
+                        <div class="info-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <h3 class="info-title">Follow-up Management</h3>
+                        <p>
+                            Automated tracking of follow-up appointments at 2 weeks, 1 month, 3 months, and 6 months intervals.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <div class="info-card fade-in" style="background: white; animation-delay: 0.4s">
+                        <div class="info-icon">
+                            <i class="fas fa-file-medical"></i>
+                        </div>
+                        <h3 class="info-title">Medical Records</h3>
+                        <p>
+                            Complete documentation of medical interventions, test results, medications, and treatment plans.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-card fade-in" style="background: white; animation-delay: 0.6s">
+                        <div class="info-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h3 class="info-title">Reporting & Analytics</h3>
+                        <p>
+                            Generate comprehensive reports for monitoring, evaluation, and evidence-based decision making.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 col-md-6">
+                    <div class="info-card fade-in" style="background: white; animation-delay: 0.8s">
+                        <div class="info-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h3 class="info-title">Data Security</h3>
+                        <p>
+                            Enterprise-grade security with role-based access control, audit trails, and data encryption.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-5 fade-in" style="animation-delay: 1s">
+                <a href="{{ url_for('login') }}" class="btn btn-hero">
+                    <i class="fas fa-sign-in-alt"></i> Access System Portal
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <img src="{{ url_for('static', filename='images/logokayunga.jpg') }}" 
+                         alt="Kayunga Hospital Logo" 
+                         class="footer-logo"
+                         onerror="this.style.display='none'">
+                    <p>
+                        Providing specialized healthcare services with compassion, excellence, and integrity since 1973.
+                    </p>
+                    <div class="mt-4">
+                        <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-linkedin fa-lg"></i></a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <h3 class="footer-title">Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="#home"><i class="fas fa-chevron-right me-2"></i> Home</a></li>
+                        <li><a href="#about"><i class="fas fa-chevron-right me-2"></i> About Us</a></li>
+                        <li><a href="#values"><i class="fas fa-chevron-right me-2"></i> Core Values</a></li>
+                        <li><a href="#system"><i class="fas fa-chevron-right me-2"></i> GBV System</a></li>
+                        <li><a href="{{ url_for('login') }}"><i class="fas fa-chevron-right me-2"></i> Staff Login</a></li>
+                    </ul>
+                </div>
+                
+                <div class="col-lg-4 col-md-6">
+                    <h3 class="footer-title">Contact Information</h3>
+                    <ul class="footer-links">
+                        <li><i class="fas fa-map-marker-alt me-2"></i> Kayunga Town, 70km from Kampala</li>
+                        <li><i class="fas fa-phone me-2"></i> +256-XXX-XXX-XXX</li>
+                        <li><i class="fas fa-envelope me-2"></i> info@kayungahospital.go.ug</li>
+                        <li><i class="fas fa-clock me-2"></i> 24/7 Emergency Services</li>
+                        <li><i class="fas fa-ambulance me-2"></i> GBV Hotline: 0800-123-456</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="copyright">
+                        <p class="mb-0">
+                            <i class="fas fa-copyright"></i> {{ now.year }} Kayunga Regional Referral Hospital. All rights reserved. | 
+                            <i class="fas fa-shield-alt"></i> GBV Patient Management System v2.0
+                        </p>
+                        <p class="mt-2">
+                            <small>
+                                <i class="fas fa-exclamation-triangle"></i> This system contains confidential information. Unauthorized access is prohibited.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Scroll animations
+        function checkScroll() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < window.innerHeight - elementVisible) {
+                    element.classList.add('visible');
+                }
+            });
+            
+            // Scroll to top button
+            const scrollTopBtn = document.getElementById('scrollTop');
+            if (window.scrollY > 300) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        }
+        
+        // Animate stats counting
+        function animateStats() {
+            const patientsCount = document.getElementById('patientsCount');
+            const followupsCount = document.getElementById('followupsCount');
+            const staffCount = document.getElementById('staffCount');
+            
+            if (patientsCount && patientsCount.getBoundingClientRect().top < window.innerHeight) {
+                animateValue(patientsCount, 0, 1250, 2000);
+                animateValue(followupsCount, 0, 3200, 2000);
+                animateValue(staffCount, 0, 45, 2000);
+                
+                // Remove event listener after animation
+                window.removeEventListener('scroll', animateStats);
+            }
+        }
+        
+        function animateValue(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                element.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+        
+        // Scroll to top functionality
+        document.getElementById('scrollTop').addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                if (this.getAttribute('href') !== '#') {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#home') {
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        const targetElement = document.querySelector(targetId);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkScroll();
+            window.addEventListener('scroll', checkScroll);
+            window.addEventListener('scroll', animateStats);
+            animateStats(); // Check on load
+            
+            // Add active class to navigation links
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.footer-links a');
+            
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    if (scrollY >= (sectionTop - 200)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                        link.style.color = 'white';
+                    }
+                });
+            });
+            
+            // Add typing effect to hero title
+            const heroTitle = document.querySelector('.hero-title');
+            const originalText = heroTitle.textContent;
+            heroTitle.textContent = '';
+            let i = 0;
+            
+            function typeWriter() {
+                if (i < originalText.length) {
+                    heroTitle.textContent += originalText.charAt(i);
+                    i++;
+                    setTimeout(typeWriter, 30);
+                }
+            }
+            
+            // Start typing after a short delay
+            setTimeout(typeWriter, 500);
+        });
+        
+        // Add particle effect to hero section
+        function createParticles() {
+            const hero = document.querySelector('.hero');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'absolute';
+                particle.style.width = `${Math.random() * 4 + 2}px`;
+                particle.style.height = particle.style.width;
+                particle.style.background = 'rgba(255, 255, 255, 0.2)';
+                particle.style.borderRadius = '50%';
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.animation = `float ${Math.random() * 20 + 10}s linear infinite`;
+                hero.appendChild(particle);
+            }
+        }
+        
+        createParticles();
+    </script>
+</body>
+</html>

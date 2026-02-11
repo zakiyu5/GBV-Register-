@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Initial Visit - GBV Register{% endblock %}
+
+{% block page_header %}
+<i class="fas fa-file-medical me-2"></i>Edit Initial Visit
+{% endblock %}
+
+{% block page_subtitle %}
+For Patient: {{ patient.client_name }} (ID: {{ patient.patient_id }})
+{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+   class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i> Back to Patient
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Patient Info -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6>Patient Information</h6>
+                    <p class="mb-1"><strong>Name:</strong> {{ patient.client_name }}</p>
+                    <p class="mb-1"><strong>Age/Sex:</strong> {{ patient.age }} / {{ patient.sex }}</p>
+                    <p class="mb-0"><strong>Arrival:</strong> {{ patient.arrival_datetime[:10] }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Incident Details</h6>
+                    <p class="mb-1"><strong>Violence Type:</strong> {{ patient.type_violence }}</p>
+                    <p class="mb-1"><strong>Perpetrator:</strong> {{ patient.perpetrator_relation or 'N/A' }}</p>
+                    <p class="mb-0"><strong>Case Type:</strong> {{ patient.type_case or 'N/A' }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Current Status</h6>
+                    <p class="mb-1">
+                        <strong>Initial Visit:</strong> 
+                        {% if initial_visit %}
+                        <span class="badge bg-success">Recorded</span>
+                        {% else %}
+                        <span class="badge bg-warning">Not Recorded</span>
+                        {% endif %}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Patient ID:</strong> {{ patient.patient_id }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initial Visit Form -->
+    <form method="POST">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Initial Medical Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Visit Information -->
+                    <div class="col-md-6">
+                        <label class="form-label">Visit Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="visit_date" 
+                               value="{{ initial_visit.visit_date[:10] if initial_visit and initial_visit.visit_date else patient.arrival_datetime[:10] }}" 
+                               required>
+                    </div>
+
+                    <!-- Laboratory Tests -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">Laboratory Tests</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">HIV Test Result</label>
+                        <select class="form-select" name="hiv_test_initial">
+                            <option value="">Select result</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.hiv_test_initial == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.hiv_test_initial == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Known Positive" {% if initial_visit and initial_visit.hiv_test_initial == 'Known Positive' %}selected{% endif %}>Known Positive</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.hiv_test_initial == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Refused" {% if initial_visit and initial_visit.hiv_test_initial == 'Refused' %}selected{% endif %}>Refused</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Pregnancy Test</label>
+                        <select class="form-select" name="pregnancy_test">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.pregnancy_test == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.pregnancy_test == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.pregnancy_test == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Not Applicable" {% if initial_visit and initial_visit.pregnancy_test == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Syphilis Test</label>
+                        <select class="form-select" name="syphilis_initial">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.syphilis_initial == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.syphilis_initial == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.syphilis_initial == 'Not Done' %}selected{% endif %}>Not Done</option>
+                            <option value="Pending" {% if initial_visit and initial_visit.syphilis_initial == 'Pending' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+
+                    <!-- Additional Tests -->
+                    <div class="col-md-3">
+                        <label class="form-label">Anal Swab</label>
+                        <select class="form-select" name="anal_swab">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.anal_swab == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.anal_swab == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.anal_swab == 'Not Done' %}selected{% endif %}>Not Done</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">HVS</label>
+                        <select class="form-select" name="hvs">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.hvs == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.hvs == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.hvs == 'Not Done' %}selected{% endif %}>Not Done</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Spermatozoa</label>
+                        <select class="form-select" name="spermatozoa">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.spermatozoa == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.spermatozoa == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.spermatozoa == 'Not Done' %}selected{% endif %}>Not Done</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Urinalysis</label>
+                        <select class="form-select" name="urinalysis">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.urinalysis == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.urinalysis == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.urinalysis == 'Not Done' %}selected{% endif %}>Not Done</option>
+                        </select>
+                    </div>
+
+                    <!-- Treatments -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">Treatments & Interventions</h6>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">PEP Given</label>
+                        <select class="form-select" name="pep_given">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.pep_given == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.pep_given == 'No' %}selected{% endif %}>No</option>
+                            <option value="Not Applicable" {% if initial_visit and initial_visit.pep_given == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">ECP Given</label>
+                        <select class="form-select" name="ecp_given">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.ecp_given == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.ecp_given == 'No' %}selected{% endif %}>No</option>
+                            <option value="Not Applicable" {% if initial_visit and initial_visit.ecp_given == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">STI Treatment</label>
+                        <select class="form-select" name="sti_treatment">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.sti_treatment == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.sti_treatment == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Syphilis Treatment</label>
+                        <select class="form-select" name="syphilis_treatment">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.syphilis_treatment == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.syphilis_treatment == 'No' %}selected{% endif %}>No</option>
+                            <option value="Not Applicable" {% if initial_visit and initial_visit.syphilis_treatment == 'Not Applicable' %}selected{% endif %}>Not Applicable</option>
+                        </select>
+                    </div>
+
+                    <!-- Vaccinations -->
+                    <div class="col-md-4">
+                        <label class="form-label">Hep B Vaccine</label>
+                        <select class="form-select" name="hep_b_vaccine_initial">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.hep_b_vaccine_initial == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.hep_b_vaccine_initial == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Tetanus Toxoid (TT)</label>
+                        <select class="form-select" name="tt_given_initial">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.tt_given_initial == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.tt_given_initial == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Hepatitis B Test</label>
+                        <select class="form-select" name="hep_b_initial">
+                            <option value="">Select result</option>
+                            <option value="Positive" {% if initial_visit and initial_visit.hep_b_initial == 'Positive' %}selected{% endif %}>Positive</option>
+                            <option value="Negative" {% if initial_visit and initial_visit.hep_b_initial == 'Negative' %}selected{% endif %}>Negative</option>
+                            <option value="Not Done" {% if initial_visit and initial_visit.hep_b_initial == 'Not Done' %}selected{% endif %}>Not Done</option>
+                        </select>
+                    </div>
+
+                    <!-- Counseling -->
+                    <div class="col-12 mt-4">
+                        <h6 class="border-bottom pb-2">Counseling & Referral</h6>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Trauma Counseling</label>
+                        <select class="form-select" name="trauma_counseling_initial">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.trauma_counseling_initial == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.trauma_counseling_initial == 'No' %}selected{% endif %}>No</option>
+                            <option value="Referred" {% if initial_visit and initial_visit.trauma_counseling_initial == 'Referred' %}selected{% endif %}>Referred</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Adherence Counseling</label>
+                        <select class="form-select" name="adherence_counseling_initial">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if initial_visit and initial_visit.adherence_counseling_initial == 'Yes' %}selected{% endif %}>Yes</option>
+                            <option value="No" {% if initial_visit and initial_visit.adherence_counseling_initial == 'No' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Referral Made</label>
+                        <select class="form-select" name="referral_initial">
+                            <option value="">Select</option>
+                            <option value="None" {% if initial_visit and initial_visit.referral_initial == 'None' %}selected{% endif %}>No Referral</option>
+                            <option value="Police" {% if initial_visit and initial_visit.referral_initial == 'Police' %}selected{% endif %}>Police</option>
+                            <option value="Legal Aid" {% if initial_visit and initial_visit.referral_initial == 'Legal Aid' %}selected{% endif %}>Legal Aid</option>
+                            <option value="Psychosocial" {% if initial_visit and initial_visit.referral_initial == 'Psychosocial' %}selected{% endif %}>Psychosocial Support</option>
+                            <option value="Shelter" {% if initial_visit and initial_visit.referral_initial == 'Shelter' %}selected{% endif %}>Shelter</option>
+                            <option value="Other Health Facility" {% if initial_visit and initial_visit.referral_initial == 'Other Health Facility' %}selected{% endif %}>Other Health Facility</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <label class="form-label">Referral Facility (If referred)</label>
+                        <input type="text" class="form-control" name="referral_facility" 
+                               value="{{ initial_visit.referral_facility if initial_visit else '' }}"
+                               placeholder="Name of referral facility">
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="col-12 mt-4">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="notes" rows="4" 
+                                  placeholder="Any additional notes about the initial visit...">
+                            {{- initial_visit.notes if initial_visit else '' -}}
+                        </textarea>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="col-12 mt-4">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patient_lookup', search_term=patient.patient_id, search_by='patient_id') }}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success px-5">
+                                <i class="fas fa-save me-2"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide referral facility based on selection
+    const referralSelect = document.querySelector('select[name="referral_initial"]');
+    const referralFacility = document.querySelector('input[name="referral_facility"]');
+    
+    if (referralSelect && referralFacility) {
+        function toggleReferralFacility() {
+            if (referralSelect.value && referralSelect.value !== 'None') {
+                referralFacility.parentElement.style.display = 'block';
+            } else {
+                referralFacility.parentElement.style.display = 'none';
+            }
+        }
+        
+        referralSelect.addEventListener('change', toggleReferralFacility);
+        toggleReferralFacility(); // Initial check
+    }
+});
+</script>
+{% endblock %}
