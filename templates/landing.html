@@ -281,6 +281,17 @@
             color: white;
         }
         
+        .contact-info {
+            color: #aaa;
+            line-height: 2;
+        }
+        
+        .contact-info i {
+            width: 25px;
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+        
         .copyright {
             text-align: center;
             padding-top: 30px;
@@ -417,7 +428,7 @@
         </div>
     </section>
     
-    <!-- Stats Section -->
+    <!-- Stats Section - Updated with realistic numbers -->
     <section class="stats-section">
         <div class="container">
             <div class="row g-4">
@@ -428,6 +439,7 @@
                         </div>
                         <div class="stat-number" id="patientsCount">0</div>
                         <div class="stat-label">Patients Served</div>
+                        <small class="text-muted">Last 30 days</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
@@ -437,6 +449,7 @@
                         </div>
                         <div class="stat-number" id="followupsCount">0</div>
                         <div class="stat-label">Follow-ups Completed</div>
+                        <small class="text-muted">This month</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
@@ -446,6 +459,7 @@
                         </div>
                         <div class="stat-number" id="staffCount">0</div>
                         <div class="stat-label">Trained Staff</div>
+                        <small class="text-muted">GBV certified</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
@@ -455,13 +469,14 @@
                         </div>
                         <div class="stat-number">24/7</div>
                         <div class="stat-label">Support Available</div>
+                        <small class="text-muted">Always here for you</small>
                     </div>
                 </div>
             </div>
         </div>
     </section>
     
-    <!-- About Section -->
+    <!-- About Section (unchanged) -->
     <section class="about-section" id="about">
         <div class="container">
             <div class="row mb-5">
@@ -542,7 +557,7 @@
         </div>
     </section>
     
-    <!-- Core Values Section -->
+    <!-- Core Values Section (unchanged) -->
     <section class="values-section" id="values">
         <div class="container">
             <div class="row mb-5">
@@ -636,7 +651,7 @@
         </div>
     </section>
     
-    <!-- GBV System Features -->
+    <!-- GBV System Features (unchanged) -->
     <section class="about-section" style="background: var(--light-bg);" id="system">
         <div class="container">
             <div class="row mb-5">
@@ -718,7 +733,7 @@
         </div>
     </section>
     
-    <!-- Footer -->
+    <!-- Footer - Updated with correct contact information -->
     <footer class="footer" id="contact">
         <div class="container">
             <div class="row g-4">
@@ -750,13 +765,13 @@
                 
                 <div class="col-lg-4 col-md-6">
                     <h3 class="footer-title">Contact Information</h3>
-                    <ul class="footer-links">
-                        <li><i class="fas fa-map-marker-alt me-2"></i> Kayunga Town, 70km from Kampala</li>
-                        <li><i class="fas fa-phone me-2"></i> +256-XXX-XXX-XXX</li>
-                        <li><i class="fas fa-envelope me-2"></i> info@kayungahospital.go.ug</li>
-                        <li><i class="fas fa-clock me-2"></i> 24/7 Emergency Services</li>
-                        <li><i class="fas fa-ambulance me-2"></i> GBV Hotline: 0800-123-456</li>
-                    </ul>
+                    <div class="contact-info">
+                        <p><i class="fas fa-map-marker-alt"></i> Kayunga Town, 70km from Kampala</p>
+                        <p><i class="fas fa-phone-alt"></i> <a href="tel:07569348020" class="text-white text-decoration-none">0756 934 8020</a></p>
+                        <p><i class="fas fa-envelope"></i> <a href="mailto:Info@kayungahospital.go.ug" class="text-white text-decoration-none">Info@kayungahospital.go.ug</a></p>
+                        <p><i class="fas fa-clock"></i> 24/7 Emergency Services</p>
+                        <p><i class="fas fa-ambulance"></i> GBV Helpline: <strong class="text-warning">0756 934 8020</strong></p>
+                    </div>
                 </div>
             </div>
             
@@ -801,16 +816,17 @@
             }
         }
         
-        // Animate stats counting
+        // Animate stats counting - Updated with realistic numbers (<10)
         function animateStats() {
             const patientsCount = document.getElementById('patientsCount');
             const followupsCount = document.getElementById('followupsCount');
             const staffCount = document.getElementById('staffCount');
             
             if (patientsCount && patientsCount.getBoundingClientRect().top < window.innerHeight) {
-                animateValue(patientsCount, 0, 1250, 2000);
-                animateValue(followupsCount, 0, 3200, 2000);
-                animateValue(staffCount, 0, 45, 2000);
+                // All numbers are less than 10 as requested
+                animateValue(patientsCount, 0, 8, 2000);      // 8 patients served
+                animateValue(followupsCount, 0, 6, 2000);     // 6 follow-ups completed
+                animateValue(staffCount, 0, 5, 2000);         // 5 trained staff
                 
                 // Remove event listener after animation
                 window.removeEventListener('scroll', animateStats);
@@ -822,7 +838,7 @@
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                element.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+                element.innerHTML = Math.floor(progress * (end - start) + start);
                 if (progress < 1) {
                     window.requestAnimationFrame(step);
                 }
@@ -928,5 +944,5 @@
         
         createParticles();
     </script>
-</body>
+</body>   
 </html>
