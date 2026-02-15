@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block page_subtitle %}
-Welcome back, {{ session.full_name }}! Here's your system overview.
+Welcome back, {{ session.get('full_name', session.get('username', 'User')) }}! Here's your system overview.
 {% endblock %}
 
 {% block page_actions %}
@@ -15,6 +15,11 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
     <button type="button" class="btn btn-outline-primary" onclick="refreshDashboard()">
         <i class="fas fa-sync-alt me-2"></i> Refresh
     </button>
+    {% if session.get('user_role') == 'super_admin' %}
+    <button type="button" class="btn btn-outline-success" onclick="exportDashboard()">
+        <i class="fas fa-download me-2"></i> Export
+    </button>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -35,7 +40,7 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                         </div>
                     </div>
                     <div class="mt-3">
-                        <small><i class="fas fa-calendar-day me-1"></i> Today: {{ today_patients }}</small>
+                        <small><i class="fas fa-calendar-day me-1"></i> Today: <span id="todayPatients">{{ today_patients }}</span></small>
                     </div>
                 </div>
             </div>
@@ -54,9 +59,9 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                         </div>
                     </div>
                     <div class="mt-3">
-                        <small>
+                        <small id="femalePercentage">
                             {% if total_patients > 0 %}
-                                {{ ((female_patients / total_patients) * 100)|round(1) }}% of total
+                                {{ female_pct }}% of total
                             {% else %}
                                 0% of total
                             {% endif %}
@@ -79,9 +84,9 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                         </div>
                     </div>
                     <div class="mt-3">
-                        <small>
+                        <small id="childPercentage">
                             {% if total_patients > 0 %}
-                                {{ ((child_patients / total_patients) * 100)|round(1) }}% of total
+                                {{ child_pct }}% of total
                             {% else %}
                                 0% of total
                             {% endif %}
@@ -116,13 +121,19 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
         <!-- Monthly Cases Chart -->
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Cases Trend</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary active" onclick="changeChartPeriod('6months')">6 Months</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="changeChartPeriod('12months')">12 Months</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="changeChartPeriod('all')">All</button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    {% if monthly_data and monthly_data|length > 0 %}
-                    <div id="monthlyChart" style="height: 300px;"></div>
-                    {% else %}
+                    <div id="monthlyChartContainer" style="height: 300px;">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    {% if not monthly_data or monthly_data|length == 0 %}
                     <div class="text-center py-5">
                         <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">No monthly data available yet</h5>
@@ -140,9 +151,10 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                     <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Violence Types</h6>
                 </div>
                 <div class="card-body">
-                    {% if violence_types and violence_types|length > 0 %}
-                    <div id="violenceChart" style="height: 300px;"></div>
-                    {% else %}
+                    <div id="violenceChartContainer" style="height: 300px;">
+                        <canvas id="violenceChart"></canvas>
+                    </div>
+                    {% if not violence_types or violence_types|length == 0 %}
                     <div class="text-center py-5">
                         <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
                         <h5 class="text-muted">No violence type data</h5>
@@ -173,13 +185,32 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for group in age_distribution %}
+                                {% for item in age_distribution %}
                                 <tr>
-                                    <td>{{ group[0] }}</td>
-                                    <td>{{ group[1] }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if item.group == 'Children (<18)' %}bg-warning text-dark
+                                            {% elif item.group == 'Youth (18-35)' %}bg-info
+                                            {% elif item.group == 'Adults (36-50)' %}bg-primary
+                                            {% elif item.group == 'Older Adults (50+)' %}bg-secondary
+                                            {% else %}bg-light{% endif %}">
+                                            {{ item.group }}
+                                        </span>
+                                    </td>
+                                    <td><strong>{{ item.count }}</strong></td>
                                     <td>
                                         {% if total_patients > 0 %}
-                                            {{ ((group[1] / total_patients) * 100)|round(1) }}%
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if item.group == 'Children (<18)' %}bg-warning
+                                                    {% elif item.group == 'Youth (18-35)' %}bg-info
+                                                    {% elif item.group == 'Adults (36-50)' %}bg-primary
+                                                    {% elif item.group == 'Older Adults (50+)' %}bg-secondary
+                                                    {% endif %}" 
+                                                    style="width: {{ ((item.count / total_patients) * 100)|round(1) }}%">
+                                                    {{ ((item.count / total_patients) * 100)|round(1) }}%
+                                                </div>
+                                            </div>
                                         {% else %}
                                             0%
                                         {% endif %}
@@ -206,24 +237,57 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                     <h6 class="mb-0"><i class="fas fa-pills me-2"></i>PEP Statistics</h6>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6 text-center">
-                            <div class="mb-3">
-                                <h3 class="text-primary">{{ pep_cases }}</h3>
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="text-primary mb-0" id="pepGiven">{{ pep_cases }}</h3>
                                 <small class="text-muted">PEP Given</small>
                             </div>
                         </div>
                         <div class="col-md-6 text-center">
-                            <div class="mb-3">
-                                <h3 class="text-success">{{ total_patients - pep_cases }}</h3>
+                            <div class="p-3 border rounded bg-light">
+                                <h3 class="text-success mb-0" id="pepNotGiven">{{ total_patients - pep_cases }}</h3>
                                 <small class="text-muted">No PEP / Not Recorded</small>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- PEP Progress Bar -->
                     {% if total_patients > 0 %}
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar bg-primary" style="width: {{ (pep_cases / total_patients) * 100 }}%"></div>
-                        <div class="progress-bar bg-success" style="width: {{ ((total_patients - pep_cases) / total_patients) * 100 }}%"></div>
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar bg-primary" 
+                             style="width: {{ (pep_cases / total_patients) * 100 }}%"
+                             role="progressbar">
+                            PEP Given: {{ (pep_cases / total_patients * 100)|round(1) }}%
+                        </div>
+                        <div class="progress-bar bg-success" 
+                             style="width: {{ ((total_patients - pep_cases) / total_patients) * 100 }}%"
+                             role="progressbar">
+                            No PEP: {{ ((total_patients - pep_cases) / total_patients * 100)|round(1) }}%
+                        </div>
+                    </div>
+                    
+                    <!-- Counseling Statistics -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="mb-3"><i class="fas fa-comment-medical me-2"></i>Counseling Services</h6>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body py-2">
+                                    <small class="text-muted">Initial Counseling</small>
+                                    <h4 class="mb-0" id="initialCounseling">{{ initial_counseling }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body py-2">
+                                    <small class="text-muted">Follow-up Counseling</small>
+                                    <h4 class="mb-0" id="followupCounseling">{{ followup_counseling }}</h4>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% else %}
                     <div class="progress" style="height: 10px;">
@@ -231,6 +295,45 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                     </div>
                     <p class="text-muted text-center mt-2 mb-0">No data available</p>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activity</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="list-group">
+                                <div class="list-group-item bg-light">
+                                    <i class="fas fa-calendar-plus me-2 text-primary"></i>
+                                    <strong>Today's Registrations</strong>
+                                    <span class="badge bg-primary float-end" id="todayRegistrations">{{ today_patients }}</span>
+                                </div>
+                                <div class="list-group-item">
+                                    <i class="fas fa-calendar-check me-2 text-success"></i>
+                                    <span>Follow-ups Today</span>
+                                    <span class="badge bg-success float-end" id="todayFollowups">{{ today_followups }}</span>
+                                </div>
+                                <div class="list-group-item">
+                                    <i class="fas fa-clock me-2 text-warning"></i>
+                                    <span>Pending Follow-ups</span>
+                                    <span class="badge bg-warning float-end" id="pendingFollowups">{{ pending_followups }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>System Status:</strong> All systems operational. Last updated: {{ now.strftime('%Y-%m-%d %H:%M') }}                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,27 +349,38 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <a href="{{ url_for('register_patient') }}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-user-plus me-2"></i>Register Patient
+                            <a href="{{ url_for('register_patient') }}" class="btn btn-outline-primary w-100 py-3">
+                                <i class="fas fa-user-plus fa-lg me-2"></i>Register Patient
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ url_for('patient_lookup') }}" class="btn btn-outline-success w-100">
-                                <i class="fas fa-search me-2"></i>Find Patient
+                            <a href="{{ url_for('patient_lookup') }}" class="btn btn-outline-success w-100 py-3">
+                                <i class="fas fa-search fa-lg me-2"></i>Find Patient
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ url_for('all_records') }}" class="btn btn-outline-info w-100">
-                                <i class="fas fa-list me-2"></i>View All Records
+                            <a href="{{ url_for('all_records') }}" class="btn btn-outline-info w-100 py-3">
+                                <i class="fas fa-list fa-lg me-2"></i>View All Records
                             </a>
                         </div>
                         <div class="col-md-3">
-                            <a href="{{ url_for('reports') }}" class="btn btn-outline-warning w-100">
-                                <i class="fas fa-chart-bar me-2"></i>Generate Reports
+                            <a href="{{ url_for('reports') }}" class="btn btn-outline-warning w-100 py-3">
+                                <i class="fas fa-chart-bar fa-lg me-2"></i>Generate Reports
                             </a>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="text-center text-muted small">
+                <i class="fas fa-lock me-1"></i> Confidential System - For authorized medical personnel only
+                <br>
+                <i class="fas fa-phone-alt me-1"></i> Support: 0414-123-456 | &copy; 2026 Kayunga Regional Referral Hospital
             </div>
         </div>
     </div>
@@ -279,24 +393,25 @@ Welcome back, {{ session.full_name }}! Here's your system overview.
 // Initialize charts
 let monthlyChart = null;
 let violenceChart = null;
+let currentPeriod = '6months';
+
+// Convert Flask data to JavaScript arrays
+const monthlyData = [
+    {% for item in monthly_data %}
+    { month: '{{ item.month }}', count: {{ item.count }} },
+    {% endfor %}
+];
+
+const violenceData = [
+    {% for item in violence_types %}
+    { type: '{{ item.type }}', count: {{ item.count }} },
+    {% endfor %}
+];
 
 function loadCharts() {
     // Destroy existing charts if they exist
     if (monthlyChart) monthlyChart.destroy();
     if (violenceChart) violenceChart.destroy();
-    
-    // Get data from Flask template
-    const monthlyData = [
-        {% for month in monthly_data %}
-        { month: '{{ month[0] }}', count: {{ month[1] }} },
-        {% endfor %}
-    ];
-    
-    const violenceData = [
-        {% for violence in violence_types %}
-        { type: '{{ violence[0] }}', count: {{ violence[1] }} },
-        {% endfor %}
-    ];
     
     // Monthly Cases Chart - only if we have data
     if (monthlyData.length > 0) {
@@ -310,9 +425,14 @@ function loadCharts() {
                     data: monthlyData.map(item => item.count),
                     borderColor: '#007bff',
                     backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    borderWidth: 2,
+                    borderWidth: 3,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointBackgroundColor: '#007bff',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
@@ -321,7 +441,20 @@ function loadCharts() {
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'top'
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 6
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Cases: ${context.parsed.y}`;
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -332,13 +465,21 @@ function loadCharts() {
                             text: 'Number of Cases'
                         },
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1,
+                            callback: function(value) {
+                                if (Math.floor(value) === value) {
+                                    return value;
+                                }
+                            }
                         }
                     },
                     x: {
                         title: {
                             display: true,
                             text: 'Month'
+                        },
+                        grid: {
+                            display: false
                         }
                     }
                 }
@@ -349,16 +490,24 @@ function loadCharts() {
     // Violence Type Chart - only if we have data
     if (violenceData.length > 0) {
         const violenceCtx = document.getElementById('violenceChart').getContext('2d');
+        
+        // Generate colors based on number of items
+        const colors = [
+            '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0',
+            '#9966ff', '#ff9f40', '#8ac926', '#1982c4',
+            '#f94144', '#f3722c', '#f8961e', '#f9c74f',
+            '#90be6d', '#43aa8b', '#577590'
+        ];
+        
         violenceChart = new Chart(violenceCtx, {
             type: 'doughnut',
             data: {
                 labels: violenceData.map(item => item.type),
                 datasets: [{
                     data: violenceData.map(item => item.count),
-                    backgroundColor: [
-                        '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0',
-                        '#9966ff', '#ff9f40', '#8ac926', '#1982c4'
-                    ]
+                    backgroundColor: colors.slice(0, violenceData.length),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
                 }]
             },
             options: {
@@ -366,12 +515,50 @@ function loadCharts() {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} cases (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
         });
     }
+}
+
+// Change chart period
+function changeChartPeriod(period) {
+    currentPeriod = period;
+    
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Fetch new data
+    fetch(`/api/dashboard_stats?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            if (monthlyChart && data.monthly && data.monthly.length > 0) {
+                monthlyChart.data.labels = data.monthly.map(item => item.month);
+                monthlyChart.data.datasets[0].data = data.monthly.map(item => item.count);
+                monthlyChart.update();
+            }
+        })
+        .catch(error => console.error('Error updating chart period:', error));
 }
 
 // Refresh dashboard data
@@ -383,7 +570,23 @@ function refreshDashboard() {
             document.getElementById('totalPatients').textContent = data.total;
             document.getElementById('femaleCases').textContent = data.female;
             document.getElementById('childCases').textContent = data.child;
-            document.getElementById('recentCases').textContent = data.weekly_trend.reduce((sum, day) => sum + day.count, 0);
+            document.getElementById('todayPatients').textContent = data.today;
+            
+            // Calculate recent cases from weekly trend
+            const recentCases = data.weekly_trend ? data.weekly_trend.reduce((sum, day) => sum + day.count, 0) : 0;
+            document.getElementById('recentCases').textContent = recentCases;
+            
+            // Update percentages
+            if (data.total > 0) {
+                document.getElementById('femalePercentage').textContent = 
+                    ((data.female / data.total) * 100).toFixed(1) + '% of total';
+                document.getElementById('childPercentage').textContent = 
+                    ((data.child / data.total) * 100).toFixed(1) + '% of total';
+            }
+            
+            // Update PEP stats
+            document.getElementById('pepGiven').textContent = data.pep_cases || 0;
+            document.getElementById('pepNotGiven').textContent = (data.total - (data.pep_cases || 0));
             
             // Update charts if they exist
             if (monthlyChart && data.monthly && data.monthly.length > 0) {
@@ -407,15 +610,25 @@ function refreshDashboard() {
         });
 }
 
+// Export dashboard data (admin only)
+function exportDashboard() {
+    window.location.href = '/export_csv?type=dashboard';
+}
+
+// Show notification
 function showNotification(message, type = 'info') {
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     alert.style.top = '20px';
     alert.style.right = '20px';
     alert.style.zIndex = '9999';
+    alert.style.minWidth = '300px';
     alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="d-flex align-items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+            <div>${message}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
     `;
     document.body.appendChild(alert);
     
@@ -435,29 +648,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <style>
 .stat-card {
-    border-radius: 10px;
+    border-radius: 15px;
     border: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    overflow: hidden;
 }
 
 .stat-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
 }
 
 .stat-icon {
     opacity: 0.8;
+    transition: transform 0.3s;
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
 }
 
 .card {
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 15px;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transition: box-shadow 0.3s;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
 }
 
 .card-header {
     background-color: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 0.75rem 1.25rem;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Chart containers */
+#monthlyChartContainer, #violenceChartContainer {
+    min-height: 300px;
+    width: 100%;
 }
 
 /* Center placeholder content */
@@ -466,7 +720,44 @@ document.addEventListener('DOMContentLoaded', function() {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 200px;
+    min-height: 250px;
+}
+
+/* Quick action buttons */
+.btn-outline-primary, .btn-outline-success, .btn-outline-info, .btn-outline-warning {
+    border-width: 2px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-outline-primary:hover, .btn-outline-success:hover, 
+.btn-outline-info:hover, .btn-outline-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.8rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
 }
 </style>
 {% endblock %}

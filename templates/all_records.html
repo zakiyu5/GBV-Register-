@@ -7,177 +7,634 @@
 {% endblock %}
 
 {% block page_subtitle %}
-Total: {{ total_count }} records | Female: {{ female_count }} | Children: {{ child_count }} | PEP: {{ pep_count }}
+View and manage all registered patients with filtering options
 {% endblock %}
 
 {% block page_actions %}
-<button class="btn btn-outline-primary" onclick="window.print()">
-    <i class="fas fa-print me-2"></i> Print
-</button>
-<a href="{{ url_for('export_csv') }}" class="btn btn-success">
-    <i class="fas fa-download me-2"></i> Export CSV
-</a>
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-primary" onclick="toggleFilters()">
+        <i class="fas fa-filter me-2"></i> Filters
+    </button>
+    {% if session.get('user_role') == 'super_admin' %}
+    <button type="button" class="btn btn-success" onclick="exportRecords()">
+        <i class="fas fa-download me-2"></i> Export
+    </button>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block content %}
-<!-- Filters -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <input type="text" class="form-control" name="search" value="{{ search }}" 
-                       placeholder="Name, ID, Serial...">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Sex</label>
-                <select class="form-select" name="sex">
-                    <option value="">All</option>
-                    <option value="F" {% if sex == 'F' %}selected{% endif %}>Female</option>
-                    <option value="M" {% if sex == 'M' %}selected{% endif %}>Male</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Violence</label>
-                <select class="form-select" name="violence">
-                    <option value="">All</option>
-                    <option value="Physical" {% if violence == 'Physical' %}selected{% endif %}>Physical</option>
-                    <option value="Sexual" {% if violence == 'Sexual' %}selected{% endif %}>Sexual</option>
-                    <option value="Emotional" {% if violence == 'Emotional' %}selected{% endif %}>Emotional</option>
-                    <option value="Economic" {% if violence == 'Economic' %}selected{% endif %}>Economic</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Age Group</label>
-                <select class="form-select" name="age_group">
-                    <option value="">All</option>
-                    <option value="child" {% if age_group == 'child' %}selected{% endif %}>Child (&lt;18)</option>
-                    <option value="adult" {% if age_group == 'adult' %}selected{% endif %}>Adult</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Date Range</label>
-                <div class="input-group">
-                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
-                    <span class="input-group-text">to</span>
-                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+<div class="content-wrapper">
+    <!-- Filters Section (Collapsible) -->
+    <div class="card border-0 shadow-sm mb-4" id="filtersCard">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Filter Records</h6>
+            <button type="button" class="btn-close" onclick="toggleFilters()"></button>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('all_records') }}" id="filterForm">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <label class="form-label">Search</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="search" value="{{ search }}" 
+                                   placeholder="Name, OPD, National ID...">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Range -->
+                    <div class="col-md-2">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                    </div>
+                    
+                    <!-- Gender Filter -->
+                    <div class="col-md-2">
+                        <label class="form-label">Gender</label>
+                        <select class="form-select" name="sex">
+                            <option value="">All</option>
+                            <option value="F" {% if sex == 'F' %}selected{% endif %}>Female</option>
+                            <option value="M" {% if sex == 'M' %}selected{% endif %}>Male</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Age Group -->
+                    <div class="col-md-2">
+                        <label class="form-label">Age Group</label>
+                        <select class="form-select" name="age_group">
+                            <option value="">All</option>
+                            <option value="child" {% if age_group == 'child' %}selected{% endif %}>Children (<18)</option>
+                            <option value="adult" {% if age_group == 'adult' %}selected{% endif %}>Adults (18+)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Violence Type -->
+                    <div class="col-md-3">
+                        <label class="form-label">Violence Type</label>
+                        <select class="form-select" name="violence">
+                            <option value="">All Types</option>
+                            {% for vt in violence_types %}
+                            <option value="{{ vt.type }}" {% if violence == vt.type %}selected{% endif %}>{{ vt.type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Follow-up Status -->
+                    <div class="col-md-3">
+                        <label class="form-label">Follow-up Status</label>
+                        <select class="form-select" name="followup">
+                            <option value="">All</option>
+                            <option value="none" {% if followup_filter == 'none' %}selected{% endif %}>No Follow-ups</option>
+                            <option value="partial" {% if followup_filter == 'partial' %}selected{% endif %}>Partial (1-3)</option>
+                            <option value="complete" {% if followup_filter == 'complete' %}selected{% endif %}>Complete (4)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Show Completed Cases -->
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="show_completed" value="true" 
+                                   id="showCompleted" {% if show_completed %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="showCompleted">
+                                Show completed cases
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Actions -->
+                    <div class="col-12">
+                        <hr>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i> Apply Filters
+                        </button>
+                        <a href="{{ url_for('all_records') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-2"></i> Clear Filters
+                        </a>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-12">
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="show_completed" 
-                           value="true" id="showCompleted" {% if show_completed %}checked{% endif %}>
-                    <label class="form-check-label" for="showCompleted">
-                        Show completed cases
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-primary float-end">
-                    <i class="fas fa-filter me-2"></i> Apply Filters
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- Records Table -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Patient ID</th>
-                        <th>Name</th>
-                        <th>Age/Sex</th>
-                        <th>Contact</th>
-                        <th>Violence Type</th>
-                        <th>Arrival Date</th>
-                        <th>PEP</th>
-                        <th>Follow-ups</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in records %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('patient_lookup', search_term=record.patient_id, search_by='patient_id') }}"
-                               class="text-decoration-none">
-                                {{ record.patient_id }}
-                            </a>
-                        </td>
-                        <td>{{ record.client_name }}</td>
-                        <td>{{ record.age }} / {{ record.sex }}</td>
-                        <td>{{ record.contact_no or 'N/A' }}</td>
-                        <td>
-                            <span class="badge bg-warning">{{ record.type_violence or 'N/A' }}</span>
-                        </td>
-                        <td>{{ record.arrival_datetime[:10] if record.arrival_datetime else 'N/A' }}</td>
-                        <td>
-                            {% if record.pep_given == 'Yes' %}
-                            <span class="badge bg-success">Yes</span>
-                            {% else %}
-                            <span class="badge bg-secondary">No</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-info">{{ record.followup_count or 0 }}/4</span>
-                        </td>
-                        <td>
-                            {% if record.outcome %}
-                            <span class="badge bg-success">Completed</span>
-                            {% elif record.followup_count and record.followup_count >= 4 %}
-                            <span class="badge bg-info">All Done</span>
-                            {% else %}
-                            <span class="badge bg-primary">Active</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('patient_lookup', search_term=record.patient_id, search_by='patient_id') }}"
-                                   class="btn btn-outline-primary" title="View">
-                                    <i class="fas fa-eye"></i>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Total Records</h6>
+                            <h2 class="mb-0">{{ total_count }}</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-database fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small>Showing {{ records|length }} records</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Female</h6>
+                            <h2 class="mb-0">{{ female_count }}</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-female fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small>{{ (female_count/total_count*100)|round(1) if total_count > 0 else 0 }}% of total</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">Children</h6>
+                            <h2 class="mb-0">{{ child_count }}</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-child fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small>{{ (child_count/total_count*100)|round(1) if total_count > 0 else 0 }}% of total</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-0">PEP Given</h6>
+                            <h2 class="mb-0">{{ pep_count }}</h2>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-pills fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small>{{ (pep_count/total_count*100)|round(1) if total_count > 0 else 0 }}% of total</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Status Distribution -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Case Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 250px;">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monthly Trend -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Registration Trend</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 250px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Records Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-table me-2"></i>Patient Records</h6>
+            <span class="badge bg-info">Total: {{ records|length }} records</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped" id="recordsTable">
+                    <thead>
+                        <tr>
+                            <th>OPD No.</th>
+                            <th>Patient Name</th>
+                            <th>Age/Sex</th>
+                            <th>Violence Type</th>
+                            <th>Arrival Date</th>
+                            <th>PEP</th>
+                            <th>Follow-ups</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-primary">{{ record.patient_id }}</span>
+                            </td>
+                            <td>
+                                <strong>{{ record.client_name }}</strong>
+                                {% if record.national_id %}
+                                <br><small class="text-muted">ID: {{ record.national_id }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ record.age }} / {{ record.sex }}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ record.type_violence or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                {{ record.arrival_datetime[:10] }}
+                                <br><small class="text-muted">{{ record.arrival_datetime[11:16] }}</small>
+                            </td>
+                            <td>
+                                {% if record.pep_given in ['Yes', 'Y'] %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">{{ record.followup_count or 0 }}/4</span>
+                                    <div class="progress" style="width: 60px; height: 6px;">
+                                        {% set pct = ((record.followup_count or 0) / 4 * 100) %}
+                                        <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if record.outcome %}
+                                <span class="badge bg-warning">Completed</span>
+                                {% elif record.followup_count and record.followup_count >= 4 %}
+                                <span class="badge bg-info">All Done</span>
+                                {% else %}
+                                <span class="badge bg-primary">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('view_patient', patient_id=record.patient_id) }}" 
+                                       class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if session.get('user_role') == 'super_admin' %}
+                                    <a href="{{ url_for('edit_patient', patient_id=record.patient_id) }}" 
+                                       class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="deletePatient('{{ record.patient_id }}', '{{ record.client_name }}')"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                                <h5 class="text-muted">No records found</h5>
+                                <p class="text-muted">Try adjusting your filters or register a new patient</p>
+                                <a href="{{ url_for('register_patient') }}" class="btn btn-primary">
+                                    <i class="fas fa-user-plus me-2"></i> Register Patient
                                 </a>
-                                <a href="{{ url_for('edit_patient', patient_id=record.patient_id) }}"
-                                   class="btn btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="10" class="text-center py-4">
-                            <div class="text-muted">
-                                <i class="fas fa-inbox fa-2x mb-3"></i>
-                                <p class="mb-0">No records found matching your filters</p>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Pagination -->
-{% if records|length > 0 %}
-<div class="mt-4">
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-            <li class="page-item disabled">
-                <a class="page-link" href="#">Previous</a>
-            </li>
-            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-            <li class="page-item"><a class="page-link" href="#">2</a></li>
-            <li class="page-item"><a class="page-link" href="#">3</a></li>
-            <li class="page-item">
-                <a class="page-link" href="#">Next</a>
-            </li>
-        </ul>
-    </nav>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete patient <strong id="deletePatientName"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone. All patient data including initial visit, follow-ups, and outcomes will be permanently deleted.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="" id="deleteForm">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
-{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Toggle filters visibility
+function toggleFilters() {
+    const filtersCard = document.getElementById('filtersCard');
+    if (filtersCard.style.display === 'none') {
+        filtersCard.style.display = 'block';
+    } else {
+        filtersCard.style.display = 'none';
+    }
+}
+
+// Delete patient function
+function deletePatient(patientId, patientName) {
+    document.getElementById('deletePatientName').textContent = patientName;
+    document.getElementById('deleteForm').action = "{{ url_for('delete_patient', patient_id=0) }}".replace('0', patientId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Export records
+function exportRecords() {
+    const form = document.getElementById('filterForm');
+    const url = new URL('/export_csv', window.location.origin);
+    new URLSearchParams(new FormData(form)).forEach((value, key) => {
+        url.searchParams.append(key, value);
+    });
+    window.location.href = url;
+}
+
+// Records data passed from Flask
+const records = {{ records|tojson|safe }};
+
+// Status counts
+let activeCount = 0;
+let completedCount = 0;
+let allDoneCount = 0;
+
+records.forEach(record => {
+    if (record.outcome) {
+        completedCount++;
+    } else if (record.followup_count && record.followup_count >= 4) {
+        allDoneCount++;
+    } else {
+        activeCount++;
+    }
+});
+
+// Status Chart
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Active Cases', 'All Follow-ups Done', 'Completed'],
+            datasets: [{
+                data: [activeCount, allDoneCount, completedCount],
+                backgroundColor: ['#4e73df', '#36b9cc', '#1cc88a'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Monthly trend data from records
+const monthlyMap = new Map();
+records.forEach(record => {
+    if (record.arrival_datetime) {
+        const month = record.arrival_datetime.substring(0, 7); // YYYY-MM
+        monthlyMap.set(month, (monthlyMap.get(month) || 0) + 1);
+    }
+});
+
+// Sort months
+const sortedMonths = Array.from(monthlyMap.keys()).sort();
+const monthlyCounts = sortedMonths.map(month => monthlyMap.get(month));
+
+// Trend Chart
+const trendCtx = document.getElementById('trendChart');
+if (trendCtx && sortedMonths.length > 0) {
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: sortedMonths,
+            datasets: [{
+                label: 'Registrations',
+                data: monthlyCounts,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                pointBackgroundColor: '#4e73df'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            if (Math.floor(value) === value) {
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Auto-submit form when checkboxes change
+document.querySelectorAll('input[type=checkbox]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        document.getElementById('filterForm').submit();
+    });
+});
+
+// Show notification
+function showNotification(message, type = 'success') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    
+    setTimeout(() => alert.remove(), 3000);
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    const tooltips = document.querySelectorAll('[title]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+    
+    // Show filters if they have values
+    const hasFilters = {{ (search or sex or violence or age_group or followup_filter or start_date or end_date)|tojson }};
+    if (hasFilters) {
+        document.getElementById('filtersCard').style.display = 'block';
+    } else {
+        document.getElementById('filtersCard').style.display = 'none';
+    }
+});
+</script>
+
+<style>
+.stat-card {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    opacity: 0.8;
+    transition: transform 0.3s;
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+.card {
+    border-radius: 15px;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-weight: 600;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.badge {
+    padding: 0.5em 0.8em;
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Filters card */
+#filtersCard {
+    transition: all 0.3s;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .btn-group {
+        display: flex;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
+}
+
+/* Print styles */
+@media print {
+    .btn-group, .stat-card, .card-header, #filtersCard, .page_actions {
+        display: none !important;
+    }
+    
+    .table {
+        width: 100% !important;
+        font-size: 10pt;
+    }
+    
+    .badge {
+        border: 1px solid #000;
+        color: #000 !important;
+        background: transparent !important;
+    }
+}
+</style>
 {% endblock %}

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, send_file, session, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, send_file, session, jsonify, g
 import sqlite3
 from datetime import datetime, timedelta
 import json
@@ -13,17 +13,69 @@ app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY') or 'kayunga_gbv_hospital_2026_secure_key'
 DB_NAME = 'gbv_kayunga_hospital.db'
 
+# Database connection functions
+def get_db():
+    """Get database connection"""
+    if 'db' not in g:
+        g.db = sqlite3.connect(DB_NAME)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_db(error):
+    """Close database connection"""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+# Database helper function
+def query_db(query, args=(), one=False):
+    cur = get_db().execute(query, args)
+    rv = cur.fetchall()
+    cur.close()
+    return (rv[0] if rv else None) if one else rv
+
+def to_float(val, default=0.0):
+    if val in (None, '', 'ND', 'NA', 'nd', 'na', 'Not Done', 'Not Applicable'):
+        return default
+    try:
+        return float(val)
+    except:
+        return default
+
+def to_int(val, default=0):
+    if val in (None, '', 'ND', 'NA', 'nd', 'na', 'Not Done', 'Not Applicable'):
+        return default
+    try:
+        return int(val)
+    except:
+        return default
 
 def init_db():
+    """Initialize the database with tables"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # Patients - Changed patient_id to INTEGER for OPD numbers
-    # Patients - Remove serial_no, make patient_id TEXT for flexibility
+    # Create users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            full_name TEXT,
+            email TEXT,
+            role TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            last_login TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Patients table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS patients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        patient_id TEXT UNIQUE NOT NULL,  -- OPD NUMBER (20202, 23022, etc.)
+        patient_id TEXT UNIQUE NOT NULL,
         arrival_datetime TEXT NOT NULL,
         national_id TEXT,
         client_name TEXT NOT NULL,
@@ -46,9 +98,9 @@ def init_db():
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
-''')
+    ''')
 
-    # Initial visits
+    # Initial visits table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS initial_visits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +130,7 @@ def init_db():
         )
     ''')
 
-    # Follow-ups
+    # Follow-ups table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS follow_ups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,7 +160,7 @@ def init_db():
         )
     ''')
 
-    # Outcomes
+    # Client outcomes table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_outcomes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,96 +174,46 @@ def init_db():
         )
     ''')
 
-    # Users
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            full_name TEXT NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
-            department TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+    conn.commit()
 
-    # Default admin
+    # Create default admin user
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
         hashed = generate_password_hash('admin123')
-        cursor.execute("INSERT INTO users (username, full_name, password, role) VALUES (?,?,?,?)",
-                       ('admin', 'System Administrator', hashed, 'admin'))
+        cursor.execute("""
+            INSERT INTO users (username, full_name, password, role, is_active) 
+            VALUES (?, ?, ?, ?, ?)
+        """, ('admin', 'System Administrator', hashed, 'super_admin', 1))
+        print("Default admin user created: admin / admin123")
 
-    # Default nurse
+    # Create default medical personnel user
     cursor.execute("SELECT * FROM users WHERE username = 'nurse'")
     if not cursor.fetchone():
         hashed = generate_password_hash('nurse123')
-        cursor.execute("INSERT INTO users (username, full_name, password, role, department) VALUES (?,?,?,?,?)",
-                       ('nurse', 'GBV Department Nurse', hashed, 'nurse', 'GBV Clinic'))
+        cursor.execute("""
+            INSERT INTO users (username, full_name, password, role, is_active) 
+            VALUES (?, ?, ?, ?, ?)
+        """, ('nurse', 'GBV Department Nurse', hashed, 'medical_personnel', 1))
+        print("Default nurse user created: nurse / nurse123")
 
     conn.commit()
     conn.close()
 
-
+# Initialize database
 init_db()
 
-
-def get_db():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def to_float(val, default=0.0):
-    if val in (None, '', 'ND', 'NA', 'nd', 'na', 'Not Done', 'Not Applicable'):
-        return default
-    try:
-        return float(val)
-    except:
-        return default
-
-
-def to_int(val, default=0):
-    if val in (None, '', 'ND', 'NA', 'nd', 'na', 'Not Done', 'Not Applicable'):
-        return default
-    try:
-        return int(val)
-    except:
-        return default
-
-
-# ─── Filters & Context ───────────────────────────────────────────────────────
-
-@app.context_processor
-def inject_now():
-    return dict(now=datetime.now())
-
-
-@app.template_filter('format_datetime')
-def format_datetime(value, fmt='%Y-%m-%d %H:%M'):
-    if not value:
-        return ''
-    try:
-        # Try different date formats
-        for date_fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%d']:
-            try:
-                return datetime.strptime(value, date_fmt).strftime(fmt)
-            except:
-                continue
-        return value
-    except:
-        return value
-
-
+# Template filters
 @app.template_filter('format_date')
 def format_date(value):
-    if not value:
-        return ''
-    try:
-        return datetime.strptime(value, '%Y-%m-%d').strftime('%d/%m/%Y')
-    except:
-        return value
+    if value and len(value) >= 10:
+        return value[:10]
+    return value
 
+@app.template_filter('format_datetime')
+def format_datetime(value, format='%Y-%m-%d %H:%M'):
+    if value:
+        return value[:16]
+    return value
 
 @app.template_filter('format_datetime_for_input')
 def format_datetime_for_input(value):
@@ -219,7 +221,6 @@ def format_datetime_for_input(value):
     if not value:
         return ''
     try:
-        # Try different date formats
         for date_fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%d']:
             try:
                 dt = datetime.strptime(value, date_fmt)
@@ -230,6 +231,9 @@ def format_datetime_for_input(value):
     except:
         return value
 
+@app.context_processor
+def inject_now():
+    return dict(now=datetime.now())
 
 # ─── Decorators ──────────────────────────────────────────────────────────────
 
@@ -242,27 +246,24 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if session.get('user_role') != 'admin':
+        if session.get('user_role') != 'super_admin':
             flash('Admin access required.', 'danger')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
 
-
 def download_required(f):
-    """Only admin can download data"""
+    """Only super_admin can download data"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if session.get('user_role') != 'admin':
+        if session.get('user_role') != 'super_admin':
             flash('Only administrators can download data.', 'danger')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
-
 
 # ─── Public routes ───────────────────────────────────────────────────────────
 
@@ -274,136 +275,171 @@ def landing():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-
-        if not username or not password:
-            flash('Please enter username and password.', 'warning')
-            return render_template('login.html')
-
-        conn = get_db()
-        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        conn.close()
-
-        if user and check_password_hash(user['password'], password):
-            session.update({
-                'user_id': user['id'],
-                'user_role': user['role'],
-                'username': user['username'],
-                'full_name': user['full_name']
-            })
-            flash(f'Welcome back, {user["full_name"]}!', 'success')
-            return redirect(url_for('dashboard'))
-
-        flash('Invalid username or password.', 'danger')
-
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = query_db('SELECT * FROM users WHERE username = ? AND is_active = 1', [username], one=True)
+        
+        if user:
+            if check_password_hash(user['password'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['user_role'] = user['role']
+                session['logged_in'] = True
+                
+                # Update last login
+                db = get_db()
+                db.execute('UPDATE users SET last_login = datetime("now") WHERE id = ?', [user['id']])
+                db.commit()
+                
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
+        
+        flash('Invalid username or password', 'error')
+    
     return render_template('login.html')
-
 
 @app.route('/logout')
 def logout():
-    name = session.pop('full_name', session.pop('username', 'User'))
     session.clear()
-    flash(f'Goodbye, {name}. You have been logged out.', 'info')
+    flash('You have been logged out.', 'info')
     return redirect(url_for('landing'))
 
+# ─── User Management Routes ─────────────────────────────────────────────────
 
-# ─── Protected routes ────────────────────────────────────────────────────────
-
-@app.route('/dashboard')
+@app.route('/manage_users')
 @login_required
-def dashboard():
-    with get_db() as conn:
-        # Get counts
-        cursor = conn.cursor()
-        
-        # Total patients
-        cursor.execute('SELECT COUNT(*) FROM patients')
-        total = cursor.fetchone()[0] or 0
-        
-        # Female patients
-        cursor.execute('SELECT COUNT(*) FROM patients WHERE sex = "F"')
-        females = cursor.fetchone()[0] or 0
-        
-        # Child patients (under 18)
-        cursor.execute('SELECT COUNT(*) FROM patients WHERE age < 18')
-        children = cursor.fetchone()[0] or 0
-        
-        # Today's patients
-        today_date = datetime.now().strftime('%Y-%m-%d')
-        cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(arrival_datetime) = ?', (today_date,))
-        today = cursor.fetchone()[0] or 0
-        
-        # Recent cases (last 7 days)
-        week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(arrival_datetime) >= ?', (week_ago,))
-        recent_cases = cursor.fetchone()[0] or 0
-        
-        # PEP cases
-        cursor.execute('''
-            SELECT COUNT(DISTINCT p.patient_id) 
-            FROM patients p 
-            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
-            WHERE iv.pep_given = "Y"
-        ''')
-        pep_cases = cursor.fetchone()[0] or 0
-        
-        # Cases by violence type
-        cursor.execute('''
-            SELECT type_violence, COUNT(*) as count 
-            FROM patients 
-            GROUP BY type_violence
-        ''')
-        violence_types = cursor.fetchall()
-        
-        # Monthly statistics for chart
-        cursor.execute('''
-            SELECT 
-                strftime('%Y-%m', arrival_datetime) as month,
-                COUNT(*) as count
-            FROM patients
-            WHERE arrival_datetime >= date('now', '-6 months')
-            GROUP BY strftime('%Y-%m', arrival_datetime)
-            ORDER BY month DESC
-            LIMIT 6
-        ''')
-        monthly_data = cursor.fetchall()
-        
-        # Age distribution
-        cursor.execute('''
-            SELECT 
-                CASE 
-                    WHEN age < 18 THEN 'Children (<18)'
-                    WHEN age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
-                    WHEN age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                    ELSE 'Older Adults (50+)'
-                END as age_group,
-                COUNT(*) as count
-            FROM patients
-            GROUP BY 
-                CASE 
-                    WHEN age < 18 THEN 'Children (<18)'
-                    WHEN age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
-                    WHEN age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                    ELSE 'Older Adults (50+)'
-                END
-        ''')
-        age_distribution = cursor.fetchall()
+def manage_users():
+    """Manage users page"""
+    if session.get('user_role') != 'super_admin':
+        flash('You do not have permission to access user management', 'error')
+        return redirect(url_for('dashboard'))
     
-    return render_template('dashboard.html',
-                           total_patients=total,
-                           female_patients=females,
-                           child_patients=children,
-                           today_patients=today,
-                           recent_cases=recent_cases,
-                           pep_cases=pep_cases,
-                           violence_types=violence_types,
-                           monthly_data=monthly_data,
-                           age_distribution=age_distribution)
+    # Get all users
+    users = query_db('''
+        SELECT id, username, full_name, email, role, is_active, last_login, created_at
+        FROM users 
+        ORDER BY created_at DESC
+    ''')
+    
+    return render_template('manage_users.html', users=users)
+
+@app.route('/add_user', methods=['POST'])
+@login_required
+def add_user():
+    """Add a new user"""
+    if session.get('user_role') != 'super_admin':
+        flash('You do not have permission to add users', 'error')
+        return redirect(url_for('manage_users'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        full_name = request.form.get('full_name')
+        email = request.form.get('email')
+        role = request.form.get('role')
+        is_active = 1 if request.form.get('is_active') else 0
+        
+        # Validate input
+        if not username or not password or not role:
+            flash('Username, password, and role are required', 'error')
+            return redirect(url_for('manage_users'))
+        
+        # Check if username already exists
+        existing = query_db('SELECT id FROM users WHERE username = ?', [username], one=True)
+        if existing:
+            flash('Username already exists', 'error')
+            return redirect(url_for('manage_users'))
+        
+        # Hash password
+        hashed_password = generate_password_hash(password)
+        
+        # Insert user
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, password, full_name, email, role, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ''', (username, hashed_password, full_name, email, role, is_active))
+        db.commit()
+        
+        flash(f'User {username} created successfully', 'success')
+    
+    return redirect(url_for('manage_users'))
+
+@app.route('/edit_user', methods=['POST'])
+@login_required
+def edit_user():
+    """Edit an existing user"""
+    if session.get('user_role') != 'super_admin':
+        flash('You do not have permission to edit users', 'error')
+        return redirect(url_for('manage_users'))
+    
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        full_name = request.form.get('full_name')
+        email = request.form.get('email')
+        role = request.form.get('role')
+        is_active = 1 if request.form.get('is_active') else 0
+        password = request.form.get('password')
+        
+        if not user_id or not role:
+            flash('User ID and role are required', 'error')
+            return redirect(url_for('manage_users'))
+        
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Update user info
+        if password and len(password) >= 6:
+            # Update with new password
+            hashed_password = generate_password_hash(password)
+            cursor.execute('''
+                UPDATE users 
+                SET full_name = ?, email = ?, role = ?, is_active = ?, password = ?
+                WHERE id = ?
+            ''', (full_name, email, role, is_active, hashed_password, user_id))
+        else:
+            # Update without password
+            cursor.execute('''
+                UPDATE users 
+                SET full_name = ?, email = ?, role = ?, is_active = ?
+                WHERE id = ?
+            ''', (full_name, email, role, is_active, user_id))
+        
+        db.commit()
+        
+        flash('User updated successfully', 'success')
+    
+    return redirect(url_for('manage_users'))
+
+@app.route('/delete_user', methods=['POST'])
+@login_required
+def delete_user():
+    """Delete a user"""
+    if session.get('user_role') != 'super_admin':
+        flash('You do not have permission to delete users', 'error')
+        return redirect(url_for('manage_users'))
+    
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        
+        # Don't allow deleting yourself
+        if int(user_id) == session.get('user_id'):
+            flash('You cannot delete your own account', 'error')
+            return redirect(url_for('manage_users'))
+        
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('DELETE FROM users WHERE id = ?', [user_id])
+        db.commit()
+        
+        flash('User deleted successfully', 'success')
+    
+    return redirect(url_for('manage_users'))
 
 @app.route('/change_password', methods=['GET', 'POST'])
 @login_required
@@ -421,75 +457,181 @@ def change_password():
             flash('Password must be at least 6 characters.', 'danger')
             return redirect(url_for('change_password'))
 
-        with get_db() as conn:
-            user = conn.execute('SELECT password FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-            if not check_password_hash(user['password'], current):
-                flash('Current password is incorrect.', 'danger')
-                return redirect(url_for('change_password'))
+        user = query_db('SELECT password FROM users WHERE id = ?', [session['user_id']], one=True)
+        if not check_password_hash(user['password'], current):
+            flash('Current password is incorrect.', 'danger')
+            return redirect(url_for('change_password'))
 
-            hashed = generate_password_hash(new_pw)
-            conn.execute('UPDATE users SET password = ? WHERE id = ?', (hashed, session['user_id']))
-            conn.commit()
+        hashed = generate_password_hash(new_pw)
+        db = get_db()
+        db.execute('UPDATE users SET password = ? WHERE id = ?', (hashed, session['user_id']))
+        db.commit()
 
         flash('Password changed successfully!', 'success')
         return redirect(url_for('dashboard'))
 
     return render_template('change_password.html')
 
+# ─── Dashboard ───────────────────────────────────────────────────────────────
 
-@app.route('/admin/users', methods=['GET', 'POST'])
+@app.route('/dashboard')
 @login_required
-@admin_required
-def manage_users():
-    conn = get_db()
-
-    if request.method == 'POST':
-        fields = ['username', 'full_name', 'password', 'role', 'department']
-        data = {k: request.form.get(k, '').strip() for k in fields}
-        if not all(data[k] for k in ['username', 'full_name', 'password']):
-            flash('Please fill all required fields.', 'danger')
-            return redirect(url_for('manage_users'))
-
-        try:
-            hashed = generate_password_hash(data['password'])
-            conn.execute('''
-                INSERT INTO users (username, full_name, password, role, department)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (data['username'], data['full_name'], hashed, data['role'] or 'nurse', data['department'] or 'GBV Clinic'))
-            conn.commit()
-            flash(f'User {data["full_name"]} created.', 'success')
-        except sqlite3.IntegrityError:
-            flash(f'Username {data["username"]} already exists.', 'danger')
-        return redirect(url_for('manage_users'))
-
-    users = conn.execute('''
-        SELECT id, username, full_name, role, department, created_at
-        FROM users ORDER BY role, username
-    ''').fetchall()
-    conn.close()
-
-    return render_template('manage_users.html', users=users)
-
-
-@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_user(user_id):
-    if user_id == session['user_id']:
-        flash("You can't delete your own account.", 'danger')
-        return redirect(url_for('manage_users'))
-
+def dashboard():
     with get_db() as conn:
-        conn.execute('DELETE FROM users WHERE id = ?', (user_id,))
-        conn.commit()
+        cursor = conn.cursor()
+        
+        # Total patients
+        cursor.execute('SELECT COUNT(*) FROM patients')
+        total = cursor.fetchone()[0] or 0
+        
+        # Female patients (handle both 'F' and 'Female')
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE sex IN ("F", "Female")')
+        females = cursor.fetchone()[0] or 0
+        
+        # Child patients (under 18)
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE age < 18')
+        children = cursor.fetchone()[0] or 0
+        
+        # Today's patients
+        today_date = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(arrival_datetime) = ?', (today_date,))
+        today = cursor.fetchone()[0] or 0
+        
+        # Recent cases (last 7 days)
+        week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(arrival_datetime) >= ?', (week_ago,))
+        recent_cases = cursor.fetchone()[0] or 0
+        
+        # PEP cases - Check for 'Yes', 'Y', 'yes' etc.
+        cursor.execute('''
+            SELECT COUNT(DISTINCT p.patient_id) 
+            FROM patients p 
+            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
+            WHERE UPPER(iv.pep_given) IN ('YES', 'Y')
+        ''')
+        pep_cases = cursor.fetchone()[0] or 0
+        
+        # Counseling counts
+        cursor.execute('''
+            SELECT 
+                COUNT(DISTINCT CASE WHEN UPPER(iv.trauma_counseling_initial) IN ('YES', 'Y') THEN p.patient_id END) as initial_counseling,
+                COUNT(DISTINCT fu.patient_id) as followup_counseling
+            FROM patients p
+            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
+            LEFT JOIN follow_ups fu ON p.patient_id = fu.patient_id AND UPPER(fu.trauma_counseling) IN ('YES', 'Y')
+        ''')
+        counseling_row = cursor.fetchone()
+        initial_counseling = counseling_row['initial_counseling'] or 0
+        followup_counseling = counseling_row['followup_counseling'] or 0
+        counseling_count = initial_counseling + followup_counseling
+        
+        # Cases by violence type - Return as list of dictionaries
+        cursor.execute('''
+            SELECT 
+                COALESCE(type_violence, 'Not Specified') as type, 
+                COUNT(*) as count 
+            FROM patients 
+            GROUP BY COALESCE(type_violence, 'Not Specified')
+            ORDER BY count DESC
+        ''')
+        violence_rows = cursor.fetchall()
+        violence_types = []
+        for row in violence_rows:
+            violence_types.append({
+                'type': row['type'],
+                'count': row['count']
+            })
+        
+        # Monthly statistics for chart - Return as list of dictionaries
+        cursor.execute('''
+            SELECT 
+                strftime('%Y-%m', arrival_datetime) as month,
+                COUNT(*) as count
+            FROM patients
+            WHERE arrival_datetime IS NOT NULL
+            GROUP BY strftime('%Y-%m', arrival_datetime)
+            ORDER BY month DESC
+            LIMIT 6
+        ''')
+        monthly_rows = cursor.fetchall()
+        monthly_data = []
+        for row in monthly_rows:
+            monthly_data.append({
+                'month': row['month'],
+                'count': row['count']
+            })
+        
+        # Age distribution - Return as list of dictionaries
+        cursor.execute('''
+            SELECT 
+                CASE 
+                    WHEN age < 18 THEN 'Children (<18)'
+                    WHEN age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
+                    WHEN age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
+                    WHEN age > 50 THEN 'Older Adults (50+)'
+                    ELSE 'Unknown'
+                END as age_group,
+                COUNT(*) as count
+            FROM patients
+            WHERE age IS NOT NULL
+            GROUP BY age_group
+            ORDER BY 
+                CASE age_group
+                    WHEN 'Children (<18)' THEN 1
+                    WHEN 'Youth (18-35)' THEN 2
+                    WHEN 'Adults (36-50)' THEN 3
+                    WHEN 'Older Adults (50+)' THEN 4
+                    ELSE 5
+                END
+        ''')
+        age_rows = cursor.fetchall()
+        age_distribution = []
+        for row in age_rows:
+            age_distribution.append({
+                'group': row['age_group'],
+                'count': row['count']
+            })
+        
+        # Today's followups
+        cursor.execute('''
+            SELECT COUNT(*) FROM follow_ups 
+            WHERE DATE(followup_date) = ?
+        ''', (today_date,))
+        today_followups = cursor.fetchone()[0] or 0
+        
+        # Pending followups
+        cursor.execute('''
+            SELECT COUNT(*) FROM follow_ups 
+            WHERE next_appointment IS NOT NULL 
+            AND DATE(next_appointment) >= ?
+            AND DATE(next_appointment) <= DATE(?, '+7 days')
+        ''', (today_date, today_date))
+        pending_followups = cursor.fetchone()[0] or 0
+    
+    # Calculate percentages
+    female_pct = round((females / total * 100), 1) if total > 0 else 0
+    child_pct = round((children / total * 100), 1) if total > 0 else 0
+    
+    return render_template('dashboard.html',
+                           total_patients=total,
+                           female_patients=females,
+                           female_pct=female_pct,
+                           child_patients=children,
+                           child_pct=child_pct,
+                           today_patients=today,
+                           recent_cases=recent_cases,
+                           pep_cases=pep_cases,
+                           counseling_count=counseling_count,
+                           initial_counseling=initial_counseling,
+                           followup_counseling=followup_counseling,
+                           violence_types=violence_types,
+                           monthly_data=monthly_data,
+                           age_distribution=age_distribution,
+                           today_followups=today_followups,
+                           pending_followups=pending_followups)
 
-    flash('User deleted.', 'success')
-    return redirect(url_for('manage_users'))
+# ─── Patient Registration ────────────────────────────────────────────────────
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-#   PATIENT REGISTRATION ───────────────────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────────────────────
 @app.route('/register_patient', methods=['GET', 'POST'])
 @login_required
 def register_patient():
@@ -577,13 +719,7 @@ def register_patient():
                            today=now.strftime('%Y-%m-%d'),
                            arrival_datetime=now.strftime('%Y-%m-%dT%H:%M'))
 
-
-
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-#   PATIENT LOOKUP & MANAGEMENT ────────────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────────────────────
+# ─── Patient Lookup & Management ────────────────────────────────────────────
 
 @app.route('/patient_lookup', methods=['GET', 'POST'])
 @login_required
@@ -608,7 +744,6 @@ def patient_lookup():
             query_map = {
                 'patient_id': 'patient_id = ?',
                 'national_id': 'national_id = ?',
-                'serial_no': 'serial_no = ?',
                 'name': 'client_name LIKE ?',
                 'contact': 'contact_no LIKE ?'
             }
@@ -619,10 +754,8 @@ def patient_lookup():
             
             query = f'SELECT * FROM patients WHERE {query_map[search_by]}'
             
-            # For patient_id search, convert to integer if it's numeric
-            if search_by == 'patient_id' and search_term.isdigit():
-                params = [int(search_term)]
-            elif search_by == 'name' or search_by == 'contact':
+            # For patient_id search, use as is (it's TEXT now)
+            if search_by == 'name' or search_by == 'contact':
                 params = [f'%{search_term}%']
             else:
                 params = [search_term]
@@ -666,8 +799,38 @@ def patient_lookup():
                          outcome=outcome,
                          available_types=available_types)
 
+@app.route('/patient/<patient_id>')
+@login_required
+def view_patient(patient_id):
+    conn = get_db()
+    
+    patient = conn.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,)).fetchone()
+    if not patient:
+        flash('Patient not found', 'danger')
+        return redirect(url_for('patient_lookup'))
+    
+    initial_visit = conn.execute('SELECT * FROM initial_visits WHERE patient_id = ?', 
+                               (patient_id,)).fetchone()
+    follow_ups = conn.execute('SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY followup_date', 
+                            (patient_id,)).fetchall()
+    outcome = conn.execute('SELECT * FROM client_outcomes WHERE patient_id = ?', 
+                         (patient_id,)).fetchone()
+    
+    # Calculate available follow-up types
+    all_types = ['2weeks', '1month', '3months', '6months']
+    existing_types = [fu['followup_type'] for fu in follow_ups]
+    available_types = [t for t in all_types if t not in existing_types]
+    
+    conn.close()
+    
+    return render_template('view_patient.html',
+                         patient=patient,
+                         initial_visit=initial_visit,
+                         follow_ups=follow_ups,
+                         outcome=outcome,
+                         available_types=available_types)
 
-@app.route('/add_followup/<int:patient_id>', methods=['GET', 'POST'])
+@app.route('/add_followup/<patient_id>', methods=['GET', 'POST'])
 @login_required
 def add_followup(patient_id):
     conn = get_db()
@@ -761,7 +924,7 @@ def add_followup(patient_id):
                 request.form.get('referral_update'),
                 request.form.get('pep_completion'),
                 request.form.get('notes'),
-                session.get('full_name', 'Unknown Staff')
+                session.get('username', 'Unknown Staff')
             ))
             
             conn.commit()
@@ -797,7 +960,6 @@ def add_followup(patient_id):
                          existing_types=existing_types,
                          suggested_date=suggested_date,
                          today=datetime.now().strftime('%Y-%m-%d'))
-
 
 @app.route('/edit_followup/<int:followup_id>', methods=['GET', 'POST'])
 @login_required
@@ -855,7 +1017,7 @@ def edit_followup(followup_id):
                 request.form.get('referral_update'),
                 request.form.get('pep_completion'),
                 request.form.get('notes'),
-                session.get('full_name', 'Unknown Staff'),
+                session.get('username', 'Unknown Staff'),
                 followup_id
             ))
             
@@ -874,8 +1036,7 @@ def edit_followup(followup_id):
     
     return render_template('edit_followup.html', followup=followup, patient=patient)
 
-
-@app.route('/edit_initial_visit/<int:patient_id>', methods=['GET', 'POST'])
+@app.route('/edit_initial_visit/<patient_id>', methods=['GET', 'POST'])
 @login_required
 def edit_initial_visit(patient_id):
     conn = get_db()
@@ -991,8 +1152,7 @@ def edit_initial_visit(patient_id):
                          initial_visit=initial_visit,
                          today=datetime.now().strftime('%Y-%m-%d'))
 
-
-@app.route('/edit_patient/<int:patient_id>', methods=['GET', 'POST'])
+@app.route('/edit_patient/<patient_id>', methods=['GET', 'POST'])
 @login_required
 def edit_patient(patient_id):
     conn = get_db()
@@ -1008,7 +1168,6 @@ def edit_patient(patient_id):
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE patients SET
-                    serial_no = ?,
                     arrival_datetime = ?,
                     national_id = ?,
                     client_name = ?,
@@ -1031,7 +1190,6 @@ def edit_patient(patient_id):
                     updated_at = CURRENT_TIMESTAMP
                 WHERE patient_id = ?
             ''', (
-                request.form.get('serial_no'),
                 request.form.get('arrival_datetime'),
                 request.form.get('national_id'),
                 request.form.get('client_name'),
@@ -1069,8 +1227,7 @@ def edit_patient(patient_id):
     
     return render_template('edit_patient.html', patient=patient)
 
-
-@app.route('/add_outcome/<int:patient_id>', methods=['GET', 'POST'])
+@app.route('/add_outcome/<patient_id>', methods=['GET', 'POST'])
 @login_required
 def add_outcome(patient_id):
     conn = get_db()
@@ -1130,7 +1287,6 @@ def add_outcome(patient_id):
                          existing_outcome=existing_outcome,
                          today=datetime.now().strftime('%Y-%m-%d'))
 
-
 @app.route('/delete_followup/<int:followup_id>', methods=['POST'])
 @login_required
 def delete_followup(followup_id):
@@ -1161,10 +1317,40 @@ def delete_followup(followup_id):
     
     return redirect(url_for('patient_lookup', search_term=patient_id, search_by='patient_id'))
 
+@app.route('/delete_patient/<patient_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_patient(patient_id):
+    conn = get_db()
+    
+    try:
+        # Check if patient exists
+        patient = conn.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,)).fetchone()
+        
+        if not patient:
+            flash('Patient not found', 'danger')
+            conn.close()
+            return redirect(url_for('patient_lookup'))
+        
+        # Delete patient and related records
+        conn.execute('DELETE FROM client_outcomes WHERE patient_id = ?', (patient_id,))
+        conn.execute('DELETE FROM follow_ups WHERE patient_id = ?', (patient_id,))
+        conn.execute('DELETE FROM initial_visits WHERE patient_id = ?', (patient_id,))
+        conn.execute('DELETE FROM patients WHERE patient_id = ?', (patient_id,))
+        
+        conn.commit()
+        
+        flash(f'<div class="alert alert-success"><i class="fas fa-check-circle"></i> Patient OPD {patient_id} deleted successfully!</div>', 'success')
+        
+    except sqlite3.Error as e:
+        conn.rollback()
+        flash(f'<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error deleting patient: {str(e)}</div>', 'danger')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('patient_lookup'))
 
-# ──────────────────────────────────────────────────────────────────────────────
-#   RECORDS & REPORTS ──────────────────────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────────────────────
+# ─── Records & Reports ──────────────────────────────────────────────────────
 
 @app.route('/all_records')
 @login_required
@@ -1181,7 +1367,16 @@ def all_records():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Build query - FIXED: Using arrival_datetime
+    # Get unique violence types for filter dropdown
+    cursor.execute('SELECT DISTINCT type_violence FROM patients WHERE type_violence IS NOT NULL ORDER BY type_violence')
+    violence_rows = cursor.fetchall()
+    violence_types = []
+    for row in violence_rows:
+        violence_types.append({
+            'type': row['type_violence']
+        })
+    
+    # Build query
     query = '''
         SELECT p.*, 
                iv.hiv_test_initial, iv.pep_given,
@@ -1240,12 +1435,21 @@ def all_records():
     query += ' ORDER BY p.arrival_datetime DESC'
     
     cursor.execute(query, params)
-    records = cursor.fetchall()
+    records_rows = cursor.fetchall()
     
+    # Convert records to dictionaries for JSON serialization
+    records = []
+    for row in records_rows:
+        record_dict = {}
+        for key in row.keys():
+            record_dict[key] = row[key]
+        records.append(record_dict)
+    
+    # Get counts for stats
     cursor.execute('SELECT COUNT(*) FROM patients')
     total_count = cursor.fetchone()[0] or 0
     
-    cursor.execute('SELECT COUNT(*) FROM patients WHERE sex = "F"')
+    cursor.execute('SELECT COUNT(*) FROM patients WHERE sex IN ("F", "Female")')
     female_count = cursor.fetchone()[0] or 0
     
     cursor.execute('SELECT COUNT(*) FROM patients WHERE age < 18')
@@ -1255,7 +1459,7 @@ def all_records():
         SELECT COUNT(DISTINCT p.patient_id) 
         FROM patients p 
         LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id 
-        WHERE iv.pep_given = "Y"
+        WHERE UPPER(iv.pep_given) IN ("YES", "Y")
     ''')
     pep_count = cursor.fetchone()[0] or 0
     
@@ -1267,6 +1471,7 @@ def all_records():
                          female_count=female_count,
                          child_count=child_count,
                          pep_count=pep_count,
+                         violence_types=violence_types,
                          search=search,
                          sex=sex,
                          violence=violence,
@@ -1275,7 +1480,6 @@ def all_records():
                          start_date=start_date,
                          end_date=end_date,
                          show_completed=show_completed)
-
 @app.route('/reports')
 @login_required
 def reports():
@@ -1313,9 +1517,10 @@ def reports():
     conn = get_db()
     cursor = conn.cursor()
     
-    # Build query - FIXED: Using arrival_datetime instead of created_at
+    # Base query for records
     query = '''
-        SELECT p.*, iv.pep_given, iv.hiv_test_initial,
+        SELECT p.*, 
+               iv.pep_given, iv.hiv_test_initial,
                (SELECT COUNT(*) FROM follow_ups f WHERE f.patient_id = p.patient_id) as followup_count,
                co.outcome
         FROM patients p
@@ -1323,46 +1528,43 @@ def reports():
         LEFT JOIN client_outcomes co ON p.patient_id = co.patient_id
         WHERE 1=1
     '''
-    count_query = 'SELECT COUNT(*) FROM patients p WHERE 1=1'
     params = []
     
+    # Date filtering
     if period != 'all' and start_date:
         query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
-        count_query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
         params.extend([start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
     elif custom_start or custom_end:
         if custom_start:
             query += ' AND DATE(p.arrival_datetime) >= ?'
-            count_query += ' AND DATE(p.arrival_datetime) >= ?'
             params.append(custom_start)
         if custom_end:
             query += ' AND DATE(p.arrival_datetime) <= ?'
-            count_query += ' AND DATE(p.arrival_datetime) <= ?'
             params.append(custom_end)
     
+    # Search filter
     if search:
         like = f'%{search}%'
         query += ' AND (p.patient_id LIKE ? OR p.national_id LIKE ? OR p.client_name LIKE ?)'
-        count_query += ' AND (p.patient_id LIKE ? OR p.national_id LIKE ? OR p.client_name LIKE ?)'
         params.extend([like, like, like])
     
+    # Sex filter
     if sex:
         query += ' AND p.sex = ?'
-        count_query += ' AND p.sex = ?'
         params.append(sex)
     
+    # Violence type filter
     if violence:
         query += ' AND p.type_violence = ?'
-        count_query += ' AND p.type_violence = ?'
         params.append(violence)
     
+    # Age group filter
     if age_group == 'child':
         query += ' AND p.age < 18'
-        count_query += ' AND p.age < 18'
     elif age_group == 'adult':
         query += ' AND p.age >= 18'
-        count_query += ' AND p.age >= 18'
     
+    # Follow-up filter
     if followup_filter:
         if followup_filter == 'none':
             query += ' AND (SELECT COUNT(*) FROM follow_ups f WHERE f.patient_id = p.patient_id) = 0'
@@ -1381,69 +1583,51 @@ def reports():
     
     query += ' ORDER BY p.arrival_datetime DESC'
     
-    # Execute main query
+    # Get records
     cursor.execute(query, params)
-    records = cursor.fetchall()
+    records_rows = cursor.fetchall()
     
-    # Execute count query
-    cursor.execute(count_query, params)
-    total_cases = cursor.fetchone()[0] or 0
+    # Convert records to dictionaries for template
+    records = []
+    for row in records_rows:
+        record_dict = {}
+        for key in row.keys():
+            record_dict[key] = row[key]
+        records.append(record_dict)
     
-    # Female count
-    female_query = count_query.replace('WHERE 1=1', 'WHERE 1=1 AND p.sex = "F"')
-    cursor.execute(female_query, params)
-    female_cases = cursor.fetchone()[0] or 0
+    # Get total cases count
+    total_cases = len(records)
     
-    # Child count
-    child_query = count_query.replace('WHERE 1=1', 'WHERE 1=1 AND p.age < 18')
-    cursor.execute(child_query, params)
-    child_cases = cursor.fetchone()[0] or 0
+    # Calculate female cases from records
+    female_cases = 0
+    for record in records:
+        if record.get('sex') in ['F', 'Female']:
+            female_cases += 1
     
-    # PEP count - FIXED: Use proper date filtering
-    pep_query = '''
-        SELECT COUNT(DISTINCT p.patient_id) 
-        FROM patients p 
-        LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
-        WHERE 1=1 AND iv.pep_given = "Y"
-    '''
-    pep_params = []
+    # Calculate child cases from records
+    child_cases = 0
+    for record in records:
+        age = record.get('age', 0)
+        if age and int(age) < 18:
+            child_cases += 1
     
-    if period != 'all' and start_date:
-        pep_query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
-        pep_params.extend([start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
-    elif custom_start or custom_end:
-        if custom_start:
-            pep_query += ' AND DATE(p.arrival_datetime) >= ?'
-            pep_params.append(custom_start)
-        if custom_end:
-            pep_query += ' AND DATE(p.arrival_datetime) <= ?'
-            pep_params.append(custom_end)
+    # Calculate PEP cases from records
+    pep_cases = 0
+    for record in records:
+        pep = record.get('pep_given', '')
+        if pep and str(pep).upper() in ['YES', 'Y']:
+            pep_cases += 1
     
-    if search:
-        like = f'%{search}%'
-        pep_query += ' AND (p.patient_id LIKE ? OR p.national_id LIKE ? OR p.client_name LIKE ?)'
-        pep_params.extend([like, like, like])
+    # Calculate percentages
+    female_pct = round((female_cases / total_cases * 100), 1) if total_cases > 0 else 0
+    child_pct = round((child_cases / total_cases * 100), 1) if total_cases > 0 else 0
+    pep_pct = round((pep_cases / total_cases * 100), 1) if total_cases > 0 else 0
     
-    if sex:
-        pep_query += ' AND p.sex = ?'
-        pep_params.append(sex)
-    
-    if violence:
-        pep_query += ' AND p.type_violence = ?'
-        pep_params.append(violence)
-    
-    if age_group == 'child':
-        pep_query += ' AND p.age < 18'
-    elif age_group == 'adult':
-        pep_query += ' AND p.age >= 18'
-    
-    cursor.execute(pep_query, pep_params)
-    pep_cases = cursor.fetchone()[0] or 0
-    
-    # Get additional statistics for charts
-    # Monthly breakdown for chart
+    # Get monthly trend data
     monthly_query = '''
-        SELECT strftime('%Y-%m', p.arrival_datetime) as month, COUNT(*) as count
+        SELECT 
+            strftime('%Y-%m', p.arrival_datetime) as month,
+            COUNT(*) as count
         FROM patients p
         WHERE 1=1
     '''
@@ -1460,131 +1644,130 @@ def reports():
             monthly_query += ' AND DATE(p.arrival_datetime) <= ?'
             monthly_params.append(custom_end)
     
+    if search:
+        like = f'%{search}%'
+        monthly_query += ' AND (p.patient_id LIKE ? OR p.national_id LIKE ? OR p.client_name LIKE ?)'
+        monthly_params.extend([like, like, like])
+    
+    if sex:
+        monthly_query += ' AND p.sex = ?'
+        monthly_params.append(sex)
+    
+    if violence:
+        monthly_query += ' AND p.type_violence = ?'
+        monthly_params.append(violence)
+    
+    if age_group == 'child':
+        monthly_query += ' AND p.age < 18'
+    elif age_group == 'adult':
+        monthly_query += ' AND p.age >= 18'
+    
     monthly_query += ' GROUP BY strftime("%Y-%m", p.arrival_datetime) ORDER BY month'
+    
     cursor.execute(monthly_query, monthly_params)
-    monthly_data = cursor.fetchall()
+    monthly_rows = cursor.fetchall()
+    monthly_data = []
+    for row in monthly_rows:
+        monthly_data.append({
+            'month': row['month'],
+            'count': row['count']
+        })
     
-    # Violence type breakdown
-    violence_query = '''
-        SELECT p.type_violence, COUNT(*) as count
-        FROM patients p
-        WHERE 1=1
-    '''
-    violence_params = []
+    # Get violence type data from records
+    violence_counts = {}
+    for record in records:
+        v_type = record.get('type_violence', 'Not Specified')
+        if not v_type:
+            v_type = 'Not Specified'
+        violence_counts[v_type] = violence_counts.get(v_type, 0) + 1
     
-    if period != 'all' and start_date:
-        violence_query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
-        violence_params.extend([start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
-    elif custom_start or custom_end:
-        if custom_start:
-            violence_query += ' AND DATE(p.arrival_datetime) >= ?'
-            violence_params.append(custom_start)
-        if custom_end:
-            violence_query += ' AND DATE(p.arrival_datetime) <= ?'
-            violence_params.append(custom_end)
+    violence_data = []
+    for v_type, count in violence_counts.items():
+        violence_data.append({
+            'type': v_type,
+            'count': count
+        })
     
-    if sex:
-        violence_query += ' AND p.sex = ?'
-        violence_params.append(sex)
+    # Get age distribution from records
+    age_counts = {
+        'Children (<18)': 0,
+        'Youth (18-35)': 0,
+        'Adults (36-50)': 0,
+        'Older Adults (50+)': 0,
+        'Unknown': 0
+    }
     
-    if age_group == 'child':
-        violence_query += ' AND p.age < 18'
-    elif age_group == 'adult':
-        violence_query += ' AND p.age >= 18'
+    for record in records:
+        age = record.get('age')
+        if age:
+            try:
+                age_val = int(age)
+                if age_val < 18:
+                    age_counts['Children (<18)'] += 1
+                elif 18 <= age_val <= 35:
+                    age_counts['Youth (18-35)'] += 1
+                elif 36 <= age_val <= 50:
+                    age_counts['Adults (36-50)'] += 1
+                elif age_val > 50:
+                    age_counts['Older Adults (50+)'] += 1
+                else:
+                    age_counts['Unknown'] += 1
+            except:
+                age_counts['Unknown'] += 1
+        else:
+            age_counts['Unknown'] += 1
     
-    violence_query += ' GROUP BY p.type_violence ORDER BY count DESC'
-    cursor.execute(violence_query, violence_params)
-    violence_data = cursor.fetchall()
+    age_distribution = []
+    for group, count in age_counts.items():
+        if count > 0:
+            age_distribution.append({
+                'group': group,
+                'count': count
+            })
     
-    # Age distribution
-    age_query = '''
-        SELECT 
-            CASE 
-                WHEN p.age < 18 THEN 'Children (<18)'
-                WHEN p.age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
-                WHEN p.age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                ELSE 'Older Adults (50+)'
-            END as age_group,
-            COUNT(*) as count
-        FROM patients p
-        WHERE 1=1
-    '''
-    age_params = []
+    # Get gender distribution from records
+    gender_counts = {}
+    for record in records:
+        gender = record.get('sex', 'Unknown')
+        if not gender:
+            gender = 'Unknown'
+        gender_counts[gender] = gender_counts.get(gender, 0) + 1
     
-    if period != 'all' and start_date:
-        age_query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
-        age_params.extend([start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
-    elif custom_start or custom_end:
-        if custom_start:
-            age_query += ' AND DATE(p.arrival_datetime) >= ?'
-            age_params.append(custom_start)
-        if custom_end:
-            age_query += ' AND DATE(p.arrival_datetime) <= ?'
-            age_params.append(custom_end)
+    gender_data = []
+    for gender, count in gender_counts.items():
+        gender_data.append({
+            'gender': gender,
+            'count': count
+        })
     
-    if sex:
-        age_query += ' AND p.sex = ?'
-        age_params.append(sex)
+    # Get follow-up status from records
+    status_counts = {
+        'Not Started': 0,
+        'In Progress': 0,
+        'All Follow-ups Done': 0,
+        'Completed': 0
+    }
     
-    if violence:
-        age_query += ' AND p.type_violence = ?'
-        age_params.append(violence)
+    for record in records:
+        outcome = record.get('outcome')
+        followup_count = record.get('followup_count', 0)
+        
+        if outcome:
+            status_counts['Completed'] += 1
+        elif followup_count and followup_count >= 4:
+            status_counts['All Follow-ups Done'] += 1
+        elif followup_count and followup_count > 0:
+            status_counts['In Progress'] += 1
+        else:
+            status_counts['Not Started'] += 1
     
-    age_query += '''
-        GROUP BY 
-            CASE 
-                WHEN p.age < 18 THEN 'Children (<18)'
-                WHEN p.age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
-                WHEN p.age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                ELSE 'Older Adults (50+)'
-            END
-    '''
-    cursor.execute(age_query, age_params)
-    age_distribution = cursor.fetchall()
-    
-    # Follow-up completion status
-    followup_query = '''
-        SELECT 
-            CASE 
-                WHEN co.outcome IS NOT NULL THEN 'Completed'
-                WHEN (SELECT COUNT(*) FROM follow_ups f WHERE f.patient_id = p.patient_id) >= 4 THEN 'All Follow-ups Done'
-                WHEN (SELECT COUNT(*) FROM follow_ups f WHERE f.patient_id = p.patient_id) > 0 THEN 'In Progress'
-                ELSE 'Not Started'
-            END as status,
-            COUNT(*) as count
-        FROM patients p
-        LEFT JOIN client_outcomes co ON p.patient_id = co.patient_id
-        WHERE 1=1
-    '''
-    followup_params = []
-    
-    if period != 'all' and start_date:
-        followup_query += ' AND DATE(p.arrival_datetime) BETWEEN ? AND ?'
-        followup_params.extend([start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')])
-    elif custom_start or custom_end:
-        if custom_start:
-            followup_query += ' AND DATE(p.arrival_datetime) >= ?'
-            followup_params.append(custom_start)
-        if custom_end:
-            followup_query += ' AND DATE(p.arrival_datetime) <= ?'
-            followup_params.append(custom_end)
-    
-    if sex:
-        followup_query += ' AND p.sex = ?'
-        followup_params.append(sex)
-    
-    if violence:
-        followup_query += ' AND p.type_violence = ?'
-        followup_params.append(violence)
-    
-    if age_group == 'child':
-        followup_query += ' AND p.age < 18'
-    elif age_group == 'adult':
-        followup_query += ' AND p.age >= 18'
-    
-    followup_query += ' GROUP BY status'
-    cursor.execute(followup_query, followup_params)
-    followup_status = cursor.fetchall()
+    followup_status = []
+    for status, count in status_counts.items():
+        if count > 0:
+            followup_status.append({
+                'status': status,
+                'count': count
+            })
     
     conn.close()
     
@@ -1592,11 +1775,11 @@ def reports():
                            records=records,
                            total_cases=total_cases,
                            female_cases=female_cases,
-                           female_pct=round(female_cases/total_cases*100, 1) if total_cases else 0,
                            child_cases=child_cases,
-                           child_pct=round(child_cases/total_cases*100, 1) if total_cases else 0,
                            pep_cases=pep_cases,
-                           pep_pct=round(pep_cases/total_cases*100, 1) if total_cases else 0,
+                           female_pct=female_pct,
+                           child_pct=child_pct,
+                           pep_pct=pep_pct,
                            period=period_name,
                            start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
                            end_date=end_date.strftime('%Y-%m-%d') if end_date else '',
@@ -1611,12 +1794,10 @@ def reports():
                            monthly_data=monthly_data,
                            violence_data=violence_data,
                            age_distribution=age_distribution,
-                           followup_status=followup_status)
+                           followup_status=followup_status,
+                           gender_data=gender_data)
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-#   EXPORT FUNCTIONALITY (ADMIN ONLY) ──────────────────────────────────────────
-# ──────────────────────────────────────────────────────────────────────────────
+# ─── Export Functionality ───────────────────────────────────────────────────
 
 @app.route('/export_csv')
 @login_required
@@ -1697,7 +1878,6 @@ def export_csv():
     # Rename columns
     column_map = {
         'patient_id': 'OPD Number',
-        'serial_no': 'Serial No',
         'arrival_datetime': 'Arrival Date',
         'national_id': 'National ID',
         'client_name': 'Client Name',
@@ -1713,7 +1893,7 @@ def export_csv():
     df.rename(columns=column_map, inplace=True)
     
     # Select only important columns
-    important_cols = ['OPD Number', 'Serial No', 'Client Name', 'Age', 'Sex', 'Violence Type', 
+    important_cols = ['OPD Number', 'Client Name', 'Age', 'Sex', 'Violence Type', 
                      'Arrival Date', 'PEP Given', 'Initial HIV Test', 'Follow-up Count', 
                      'Outcome', 'Registration Date']
     df = df[[col for col in important_cols if col in df.columns]]
@@ -1731,206 +1911,81 @@ def export_csv():
         download_name=filename
     )
 
-
 @app.route('/export_patient/<patient_id>')
 @login_required
+@download_required  # Only super_admin can export
 def export_patient(patient_id):
-    conn = get_db()
-    
     try:
         # Get patient data
-        patient = conn.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,)).fetchone()
+        patient = query_db('SELECT * FROM patients WHERE patient_id = ?', [patient_id], one=True)
+        
         if not patient:
-            flash('Patient not found', 'danger')
+            flash('Patient not found', 'error')
             return redirect(url_for('patient_lookup'))
         
-        initial_visit = conn.execute('SELECT * FROM initial_visits WHERE patient_id = ?', 
-                                   (patient_id,)).fetchone()
-        follow_ups = conn.execute('SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY followup_date', 
-                                (patient_id,)).fetchall()
-        outcome = conn.execute('SELECT * FROM client_outcomes WHERE patient_id = ?', 
-                             (patient_id,)).fetchone()
+        # Convert sqlite3.Row to dictionary properly
+        patient_dict = {}
+        for key in patient.keys():
+            patient_dict[key] = patient[key]
         
-        # Create HTML report
-        html_content = f'''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>GBV Patient Report - OPD {patient_id}: {patient.get('client_name', 'N/A')}</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                .header {{ text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }}
-                .section {{ margin-bottom: 25px; page-break-inside: avoid; }}
-                .section-title {{ background-color: #f5f5f5; padding: 8px 15px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 15px; }}
-                table {{ width: 100%; border-collapse: collapse; margin-bottom: 15px; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f8f9fa; }}
-                .footer {{ margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }}
-                .opd-badge {{ background-color: #007bff; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; display: inline-block; margin: 5px 0; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>Kayunga Regional Referral Hospital</h1>
-                <h2>Gender-Based Violence Patient Report</h2>
-                <p>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <div class="opd-badge">OPD NUMBER: {patient_id}</div>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">Patient Information</div>
-                <table>
-                    <tr><th>OPD Number:</th><td>{patient_id}</td></tr>
-                    <tr><th>Name:</th><td>{patient.get('client_name', 'N/A')}</td></tr>
-                    <tr><th>Age/Sex:</th><td>{patient.get('age', 'N/A')} / {patient.get('sex', 'N/A')}</td></tr>
-                    <tr><th>Arrival Date:</th><td>{patient.get('arrival_datetime', 'N/A')}</td></tr>
-                    <tr><th>Contact:</th><td>{patient.get('contact_no', 'N/A')}</td></tr>
-                    <tr><th>Violence Type:</th><td>{patient.get('type_violence', 'N/A')}</td></tr>
-                </table>
-            </div>
-        '''
-        
+        # Get initial visit
+        initial_visit = query_db('SELECT * FROM initial_visits WHERE patient_id = ?', [patient_id], one=True)
+        initial_dict = {}
         if initial_visit:
-            html_content += f'''
-            <div class="section">
-                <div class="section-title">Initial Visit</div>
-                <table>
-                    <tr><th>HIV Test:</th><td>{initial_visit.get('hiv_test_initial', 'N/A')}</td></tr>
-                    <tr><th>PEP Given:</th><td>{initial_visit.get('pep_given', 'N/A')}</td></tr>
-                    <tr><th>Trauma Counseling:</th><td>{initial_visit.get('trauma_counseling_initial', 'N/A')}</td></tr>
-                </table>
-            </div>
-            '''
+            for key in initial_visit.keys():
+                initial_dict[key] = initial_visit[key]
         
-        if follow_ups:
-            html_content += '''
-            <div class="section">
-                <div class="section-title">Follow-ups</div>
-                <table>
-                    <tr>
-                        <th>Type</th><th>Date</th><th>HIV Test</th><th>PEP Refill</th><th>Counseling</th>
-                    </tr>
-            '''
-            for fu in follow_ups:
-                html_content += f'''
-                    <tr>
-                        <td>{fu.get('followup_type', 'N/A').replace('2weeks', '2 Weeks').replace('1month', '1 Month').replace('3months', '3 Months').replace('6months', '6 Months')}</td>
-                        <td>{fu.get('followup_date', 'N/A')}</td>
-                        <td>{fu.get('hiv_test', 'N/A')}</td>
-                        <td>{fu.get('pep_refill', 'N/A')}</td>
-                        <td>{fu.get('trauma_counseling', 'N/A')}</td>
-                    </tr>
-                '''
-            html_content += '</table></div>'
+        # Get follow-ups
+        follow_ups = query_db('SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY followup_date', [patient_id])
+        follow_ups_list = []
+        for fu in follow_ups:
+            fu_dict = {}
+            for key in fu.keys():
+                fu_dict[key] = fu[key]
+            follow_ups_list.append(fu_dict)
         
-        if outcome:
-            html_content += f'''
-            <div class="section">
-                <div class="section-title">Client Outcome</div>
-                <table>
-                    <tr><th>Outcome:</th><td>{outcome.get('outcome', 'N/A')}</td></tr>
-                    <tr><th>Date:</th><td>{outcome.get('outcome_date', 'N/A')}</td></tr>
-                    <tr><th>Notes:</th><td>{outcome.get('notes', 'N/A')}</td></tr>
-                </table>
-            </div>
-            '''
-        
-        html_content += f'''
-            <div class="footer">
-                <p>Confidential Medical Record - For authorized personnel only</p>
-                <p>Kayunga Regional Referral Hospital - GBV Department</p>
-            </div>
-        </body>
-        </html>
-        '''
-        
+        # Create a BytesIO object
         output = BytesIO()
-        output.write(html_content.encode('utf-8'))
-        output.seek(0)
         
-        safe_name = patient.get('client_name', 'patient').replace(' ', '_').replace('/', '_')
-        filename = f"gbv_opd_{patient_id}_{safe_name}_{datetime.now().strftime('%Y%m%d')}.html"
+        # Create Excel writer
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Patient info sheet
+            patient_info = pd.DataFrame([patient_dict])
+            patient_info.to_excel(writer, sheet_name='Patient Info', index=False)
+            
+            # Initial visit sheet
+            if initial_dict:
+                initial_df = pd.DataFrame([initial_dict])
+                initial_df.to_excel(writer, sheet_name='Initial Visit', index=False)
+            
+            # Follow-ups sheet
+            if follow_ups_list:
+                follow_ups_df = pd.DataFrame(follow_ups_list)
+                follow_ups_df.to_excel(writer, sheet_name='Follow-ups', index=False)
+        
+        # Set up response
+        output.seek(0)
         
         return send_file(
             output,
-            mimetype='text/html',
+            download_name=f'patient_{patient_id}_export.xlsx',
             as_attachment=True,
-            download_name=filename
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         
     except Exception as e:
-        print(f"Export error: {str(e)}")
-        flash(f'Error exporting patient data: {str(e)}', 'danger')
-        # FIXED: Redirect to view_patient endpoint which you created
+        print(f"Error exporting patient data: {str(e)}")
+        flash('Error exporting patient data', 'error')
         return redirect(url_for('view_patient', patient_id=patient_id))
 
-@app.route('/patient/<patient_id>')
+
+
+# contact 
+@app.route('/contact')
 @login_required
-def view_patient(patient_id):
-    conn = get_db()
-    
-    patient = conn.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,)).fetchone()
-    if not patient:
-        flash('Patient not found', 'danger')
-        return redirect(url_for('patient_lookup'))
-    
-    initial_visit = conn.execute('SELECT * FROM initial_visits WHERE patient_id = ?', 
-                               (patient_id,)).fetchone()
-    follow_ups = conn.execute('SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY followup_date', 
-                            (patient_id,)).fetchall()
-    outcome = conn.execute('SELECT * FROM client_outcomes WHERE patient_id = ?', 
-                         (patient_id,)).fetchone()
-    
-    # Calculate available follow-up types
-    all_types = ['2weeks', '1month', '3months', '6months']
-    existing_types = [fu['followup_type'] for fu in follow_ups]
-    available_types = [t for t in all_types if t not in existing_types]
-    
-    conn.close()
-    
-    return render_template('view_patient.html',
-                         patient=patient,
-                         initial_visit=initial_visit,
-                         follow_ups=follow_ups,
-                         outcome=outcome,
-                         available_types=available_types)
-
-@app.route('/delete_patient/<int:patient_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_patient(patient_id):
-    conn = get_db()
-    
-    try:
-        # Check if patient exists
-        patient = conn.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,)).fetchone()
-        
-        if not patient:
-            flash('Patient not found', 'danger')
-            conn.close()
-            return redirect(url_for('patient_lookup'))
-        
-        # Delete patient and related records
-        conn.execute('DELETE FROM client_outcomes WHERE patient_id = ?', (patient_id,))
-        conn.execute('DELETE FROM follow_ups WHERE patient_id = ?', (patient_id,))
-        conn.execute('DELETE FROM initial_visits WHERE patient_id = ?', (patient_id,))
-        conn.execute('DELETE FROM patients WHERE patient_id = ?', (patient_id,))
-        
-        conn.commit()
-        
-        flash(f'<div class="alert alert-success"><i class="fas fa-check-circle"></i> Patient OPD {patient_id} deleted successfully!</div>', 'success')
-        
-    except sqlite3.Error as e:
-        conn.rollback()
-        flash(f'<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error deleting patient: {str(e)}</div>', 'danger')
-    finally:
-        conn.close()
-    
-    return redirect(url_for('patient_lookup'))
-
-
-# ─── Dashboard Statistics API ────────────────────────────────────────────────
+def contact():
+    return render_template('contact.html')
+# ─── Dashboard Statistics API ───────────────────────────────────────────────
 
 @app.route('/api/dashboard_stats')
 @login_required
@@ -1938,11 +1993,11 @@ def dashboard_stats():
     with get_db() as conn:
         cursor = conn.cursor()
         
-        # Get counts
+        # Get counts with proper handling
         cursor.execute('SELECT COUNT(*) FROM patients')
         total_patients = cursor.fetchone()[0] or 0
         
-        cursor.execute('SELECT COUNT(*) FROM patients WHERE sex = "F"')
+        cursor.execute('SELECT COUNT(*) FROM patients WHERE sex IN ("F", "Female")')
         female_patients = cursor.fetchone()[0] or 0
         
         cursor.execute('SELECT COUNT(*) FROM patients WHERE age < 18')
@@ -1952,6 +2007,15 @@ def dashboard_stats():
         today_date = datetime.now().strftime('%Y-%m-%d')
         cursor.execute('SELECT COUNT(*) FROM patients WHERE DATE(arrival_datetime) = ?', (today_date,))
         today_patients = cursor.fetchone()[0] or 0
+        
+        # PEP cases
+        cursor.execute('''
+            SELECT COUNT(DISTINCT p.patient_id) 
+            FROM patients p 
+            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
+            WHERE UPPER(iv.pep_given) IN ('YES', 'Y')
+        ''')
+        pep_cases = cursor.fetchone()[0] or 0
         
         # Weekly trend
         cursor.execute('''
@@ -1963,9 +2027,10 @@ def dashboard_stats():
             GROUP BY DATE(arrival_datetime)
             ORDER BY date
         ''')
-        weekly_data = cursor.fetchall()
+        weekly_rows = cursor.fetchall()
+        weekly_trend = [{'date': row['date'], 'count': row['count']} for row in weekly_rows]
         
-        # Monthly data for chart
+        # Monthly data
         cursor.execute('''
             SELECT 
                 strftime('%Y-%m', arrival_datetime) as month,
@@ -1975,16 +2040,20 @@ def dashboard_stats():
             GROUP BY strftime('%Y-%m', arrival_datetime)
             ORDER BY month
         ''')
-        monthly_data = cursor.fetchall()
+        monthly_rows = cursor.fetchall()
+        monthly = [{'month': row['month'], 'count': row['count']} for row in monthly_rows]
         
-        # Violence type breakdown
+        # Violence types
         cursor.execute('''
-            SELECT type_violence, COUNT(*) as count
+            SELECT 
+                COALESCE(type_violence, 'Not Specified') as type,
+                COUNT(*) as count
             FROM patients
-            GROUP BY type_violence
+            GROUP BY COALESCE(type_violence, 'Not Specified')
             ORDER BY count DESC
         ''')
-        violence_data = cursor.fetchall()
+        violence_rows = cursor.fetchall()
+        violence_types = [{'type': row['type'], 'count': row['count']} for row in violence_rows]
         
         # Age distribution
         cursor.execute('''
@@ -1993,47 +2062,79 @@ def dashboard_stats():
                     WHEN age < 18 THEN 'Children (<18)'
                     WHEN age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
                     WHEN age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                    ELSE 'Older Adults (50+)'
+                    WHEN age > 50 THEN 'Older Adults (50+)'
+                    ELSE 'Unknown'
                 END as age_group,
                 COUNT(*) as count
             FROM patients
-            GROUP BY 
-                CASE 
-                    WHEN age < 18 THEN 'Children (<18)'
-                    WHEN age BETWEEN 18 AND 35 THEN 'Youth (18-35)'
-                    WHEN age BETWEEN 36 AND 50 THEN 'Adults (36-50)'
-                    ELSE 'Older Adults (50+)'
-                END
+            WHERE age IS NOT NULL
+            GROUP BY age_group
         ''')
-        age_data = cursor.fetchall()
+        age_rows = cursor.fetchall()
+        age_distribution = [{'group': row['age_group'], 'count': row['count']} for row in age_rows]
         
-        # PEP statistics
+        # PEP statistics for pie chart
         cursor.execute('''
             SELECT 
                 CASE 
-                    WHEN iv.pep_given = 'Y' THEN 'PEP Given'
-                    WHEN iv.pep_given = 'N' THEN 'No PEP'
+                    WHEN UPPER(iv.pep_given) IN ('YES', 'Y') THEN 'PEP Given'
+                    WHEN iv.pep_given IS NOT NULL THEN 'No PEP'
                     ELSE 'Not Recorded'
                 END as pep_status,
-                COUNT(*) as count
+                COUNT(DISTINCT p.patient_id) as count
             FROM patients p
             LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
-            GROUP BY iv.pep_given
+            GROUP BY pep_status
         ''')
-        pep_data = cursor.fetchall()
+        pep_rows = cursor.fetchall()
+        pep_stats = [{'status': row['pep_status'], 'count': row['count']} for row in pep_rows]
     
     return jsonify({
         'total': total_patients,
         'female': female_patients,
         'child': child_patients,
         'today': today_patients,
-        'weekly_trend': [{'date': row[0], 'count': row[1]} for row in weekly_data],
-        'monthly': [{'month': row[0], 'count': row[1]} for row in monthly_data],
-        'violence_types': [{'type': row[0], 'count': row[1]} for row in violence_data],
-        'age_distribution': [{'group': row[0], 'count': row[1]} for row in age_data],
-        'pep_stats': [{'status': row[0], 'count': row[1]} for row in pep_data]
+        'pep_cases': pep_cases,
+        'weekly_trend': weekly_trend,
+        'monthly': monthly,
+        'violence_types': violence_types,
+        'age_distribution': age_distribution,
+        'pep_stats': pep_stats
     })
 
+    # debug 
+
+# Add this temporary route to debug
+@app.route('/debug_stats')
+@login_required
+def debug_stats():
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Check PEP data
+        cursor.execute('''
+            SELECT p.patient_id, p.client_name, iv.pep_given 
+            FROM patients p 
+            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
+        ''')
+        pep_data = cursor.fetchall()
+        
+        # Check counseling data
+        cursor.execute('''
+            SELECT p.patient_id, p.client_name, 
+                   iv.trauma_counseling_initial,
+                   COUNT(fu.id) as followup_counseling
+            FROM patients p 
+            LEFT JOIN initial_visits iv ON p.patient_id = iv.patient_id
+            LEFT JOIN follow_ups fu ON p.patient_id = fu.patient_id AND fu.trauma_counseling = 'Yes'
+            GROUP BY p.patient_id
+        ''')
+        counseling_data = cursor.fetchall()
+        
+        return {
+            'pep_data': [dict(row) for row in pep_data],
+            'counseling_data': [dict(row) for row in counseling_data]
+        }
 
 # ─── Error handlers ──────────────────────────────────────────────────────────
 
@@ -2041,11 +2142,9 @@ def dashboard_stats():
 def page_not_found(e):
     return render_template('404.html'), 404
 
-
 @app.errorhandler(500)
 def server_error(e):
     return render_template('500.html'), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
