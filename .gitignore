@@ -1,6 +1,5 @@
 # Database - NEVER commit real patient data
-gbv.db
-
+gbv_kayunga_hospital.db
 # Python cache files
 __pycache__/
 *.pyc
